@@ -1,0 +1,4 @@
+- uri: example.com
+  path: /var/www/html/example.com/httpdocs
+- uri: example2.com
+  path: /var/www/html/example2.com/httpdocs

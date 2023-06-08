@@ -1,0 +1,38 @@
+# OPTIONAL: path in which to write log files. If not specified, the script will attempt to use /var/log.
+# If the destination is not writable, no log will be recorded and the email notification will mention this.
+# NOTE: NO TRAILING SLASH!
+log_file_path: ''
+# OPTIONAL: Script to execute after updates are completed. This would be useful if you wanted to have it
+# correct permissions on the files once the update is complete. This command will always be run from
+# within the site's directory
+post_execution_script: ''
+# OPTIONAL: Enable dry-run mode - this runs the updates but does NOT commit or push to git repository.
+dry_run: false
+mail:
+  # REQUIRED: Notification email address.
+  notification_email: 'johnny.appleseed@example.com'
+  # REQUIRED: The SMTP hostname to send email through.
+  smtp_host: ''
+  # REQUIRED: The SMTP port to send email through.
+  smtp_port: ''
+  # OPTIONAL: The secure method to use for SMTP connection.
+  # Must be one of 'tls' or 'ssl'.
+  smtp_secure_method: ''
+  # OPTIONAL: The SMTP username.
+  smtp_user: ''
+  # OPTIONAL: The SMTP password.
+  smtp_pass: ''
+  # REQUIRED: From email address (without name).
+  from_email: 'johnny.appleseed@example.com'
+  # REQUIRED: From name for sending emails.
+  from_email_name: 'Johnny Appleseed'
+git:
+  # REQUIRED: Git commit author. Must be in the proper format, or errors will occur
+  # when committing resulting in the script failing.
+  commit_author: 'Johnny Appleseed <johnny.appleseed@example.com>'
+  # OPTIONAL: The name of the main git branch to use. If not specified, the script
+  # will attempt to use 'master'.
+  main_branch: ''
+  # OPTIONAL: The name of the branch to use for updates. If not specified, the script
+  # will attempt to use 'drupal-updates'.
+  update_branch: ''
