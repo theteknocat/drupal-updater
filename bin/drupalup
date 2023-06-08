@@ -1,0 +1,15 @@
+#!/usr/bin/env php
+<?php declare(strict_types = 1);
+
+/*
+ * This script automates the running of Drupal core and module updates
+ * for Drupal 8 and up.
+ */
+
+// Hide PHP 8.1 deprecation warnings.
+error_reporting(E_ALL & ~E_DEPRECATED);
+
+require __DIR__ . '/../vendor/autoload.php';
+
+$app = new TheTeknocat\DrupalUp\App();
+$app->run();
