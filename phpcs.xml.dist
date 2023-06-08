@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="drupalup">
+    <description>Basic PHP Standards</description>
+
+    <file>./src</file>
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+
+    <rule ref="Generic.PHP.Syntax"/>
+    <rule ref="PSR1"/>
+    <rule ref="PSR2"/>
+
+     <!-- Check for cross-version support for PHP 8.1 and higher. -->
+    <config name="testVersion" value="8.1-"/>
+</ruleset>
