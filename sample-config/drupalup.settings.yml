@@ -6,8 +6,6 @@ log_file_path: ''
 # correct permissions on the files once the update is complete. This command will always be run from
 # within the site's directory
 post_execution_script: ''
-# OPTIONAL: Enable dry-run mode - this runs the updates but does NOT commit or push to git repository.
-dry_run: false
 mail:
   # REQUIRED: Notification email address.
   notification_email: 'johnny.appleseed@example.com'
