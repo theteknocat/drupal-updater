@@ -1,5 +1,5 @@
 {
-    "name": "teknocat/drupal-updater",
+    "name": "theteknocat/drupal-updater",
     "description": "Updates Drupal core and contrib modules. Compatible with Drupal 8+ only.",
     "type": "library",
     "version": "1.0.0",
