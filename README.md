@@ -9,3 +9,5 @@ A command-line tool for automating Drupal 8+ site updates with the following fea
 * Detailed summary of updates that can be used for the git commit
 * Option to send email notifications (including the detailed summary)
 * Options for handling scaffold files that may have been overriden in the project
+
+This is a new project in progress, please stand by.
