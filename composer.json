@@ -16,5 +16,11 @@
         "symfony/yaml": "^6.3",
         "symfony/mailer": "^6.3",
         "league/commonmark": "^2.4"
-    }
+    },
+    "autoload": {
+        "psr-4": {
+            "DrupalUp\\DrupalUp\\": "src/"
+        }
+    },
+    "bin": ["bin/drupalup"]
 }
