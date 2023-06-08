@@ -1,4 +1,4 @@
-# theteknocat/drupal/updater
+# theteknocat/drupal-updater
 
 A command-line tool for automating Drupal 8+ site updates with the following features:
 
