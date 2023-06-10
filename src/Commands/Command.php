@@ -20,6 +20,15 @@ use TheTeknocat\DrupalUp\Commands\Interfaces\CommandInterface;
 abstract class Command extends BaseCommand implements CommandInterface
 {
     /**
+     * The minimum composer version required.
+     *
+     * @see https://www.drupal.org/docs/system-requirements/composer-requirements
+     *
+     * @var string
+     */
+    const MIN_COMPOSER_VERSION = '2.3.6';
+
+    /**
      * The config array, loaded from the yml file.
      *
      * @var array
@@ -318,9 +327,10 @@ abstract class Command extends BaseCommand implements CommandInterface
             $version = trim($process->getOutput());
             if (preg_match('/^Composer version ([0-9\.]+) .*$/', $version, $matches)) {
                 $this->composerVersion = $matches[1];
-                if (version_compare($this->composerVersion, '2.3.6', '<')) {
+                if (version_compare($this->composerVersion, self::MIN_COMPOSER_VERSION, '<')) {
                     $this->log(
-                        'Composer version ' . $this->composerVersion . ' found. Version 2.3.6 or greater is required.',
+                        'Composer version ' . $this->composerVersion . ' found. Version '
+                            . self::MIN_COMPOSER_VERSION . ' or greater is required.',
                         LogLevel::ERROR
                     );
                     return false;
