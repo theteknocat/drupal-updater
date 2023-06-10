@@ -27,6 +27,24 @@ The reason the list of sites is in a separate file from the base configuration i
 
 You can find sample configuration files in the sample-config folder.
 
+## Pre-requisites
+
+### Git
+
+Git must be installed on the system as it will be used to check the current state of the codebase, as well as perform any git operations if not running updates in dry-run mode.
+
+When running one of the commands, it needs to ensure that the codebase has no new or modified files and that it is currently on the appropriate branch. This is to prevent breaking something in case the site currently has some other work in progress.
+
+When running updates and not using dry-run mode, it will also be used to commit the updates to the updates branch and push them to the remote repository.
+
+### Composer
+
+Composer must be installed on the system since that is what is used to install updates with. It will require the minimum version of composer specified at [https://www.drupal.org/docs/system-requirements/composer-requirements](https://www.drupal.org/docs/system-requirements/composer-requirements).
+
+### Drush
+
+The script will expect to find the drush binary in vendor/bin within the codebase of each site. If it is not found, the site will be skipped and an error notification generated. If you have specified drush under require-dev in the composer file, then the system running this script needs to have the sites all installed with the dev requirements.
+
 ## Commands
 
 This is still a work in progress, but this is what the expected commands will be:
@@ -40,6 +58,7 @@ Command: `drupalup update`
 Options:
 
 * `<uri>` - Optional. Specify a single site to update. Must match a URI in the drupalup.sites.yml file.
+* `--list` - Optional. Only applies if `<uri>` is not supplied. Lists all available sites allowing the user to select one.
 * `--notify` - Optional. Send an email notification on completion.
 * `--dry-run` - perform a dry-run, meaning run all the updates, send a notification (if enabled), but do not perform any git actions.
 
@@ -53,6 +72,10 @@ Command: `drupalup rollback`
 
 Options:
 
-* `--uri=example.com` - Required. Must match a URI in the drupalup.sites.yml file.
+* `<uri>` - Optional. Must match a URI in the drupalup.sites.yml file. If not supplied, all available sites will be listed for the user to choose the one to rollback.
 
-The rollback process will fail if the source is not currently on the updates branch or there is no database backup file found.
+The rollback process will fail if the source is not currently on either the updates or master branch or there is no database backup file found.
+
+## Composer and Drush
+
+The script will only be able to work if both of these
