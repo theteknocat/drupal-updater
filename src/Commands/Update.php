@@ -2,7 +2,6 @@
 
 namespace TheTeknocat\DrupalUp\Commands;
 
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 
 class Update extends Command
@@ -24,7 +23,7 @@ class Update extends Command
     /**
      * {@inheritdoc}
      */
-    protected function configure()
+    public function configureCommand(): Command
     {
         $this->setName('update')
             ->setDescription('Updates Drupal core and modules.')
@@ -47,12 +46,8 @@ class Update extends Command
                 'L',
                 InputOption::VALUE_NONE,
                 'List all sites and request input on which one to update. Ignored if a uri is provided.'
-            )
-            ->addArgument(
-                'uri',
-                InputArgument::OPTIONAL,
-                'The URI of a specific site to update. Must match a URI in the drupalup.sites.yml file.'
             );
+        return $this;
     }
 
     /**
@@ -92,8 +87,11 @@ class Update extends Command
      */
     protected function runUpdate(): int
     {
-        $this->io->section('Starting updates...');
-        $this->io->section('Updates complete.');
+        if (!empty($this->sitesToProcess)) {
+            foreach ($this->sitesToProcess as $site) {
+                $site->update();
+            }
+        }
         return 0;
     }
 }

@@ -4,21 +4,27 @@ namespace TheTeknocat\DrupalUp\Commands;
 
 use Psr\Log\LogLevel;
 use Symfony\Component\Console\Command\Command as BaseCommand;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Logger\ConsoleLogger;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Validator\Constraints\Email;
 use Symfony\Component\Validator\Validation;
 use Symfony\Component\Yaml\Yaml;
 use TheTeknocat\DrupalUp\Commands\Interfaces\CommandInterface;
+use TheTeknocat\DrupalUp\Commands\Models\Site;
+use TheTeknocat\DrupalUp\Commands\Traits\MessagesTrait;
 
 /**
  * The base command class with common functions.
  */
 abstract class Command extends BaseCommand implements CommandInterface
 {
+    use MessagesTrait;
+
     /**
      * The minimum composer version required.
      *
@@ -61,6 +67,13 @@ abstract class Command extends BaseCommand implements CommandInterface
     protected $siteList = [];
 
     /**
+     * The sites to process.
+     *
+     * @var \TheTeknocat\DrupalUp\Commands\Models\Site[]
+     */
+    protected $sitesToProcess = [];
+
+    /**
      * The input object.
      *
      * @var \Symfony\Component\Console\Input\InputInterface
@@ -73,13 +86,6 @@ abstract class Command extends BaseCommand implements CommandInterface
      * @var \Symfony\Component\Console\Output\OutputInterface
      */
     protected $output;
-
-    /**
-     * The logger object.
-     *
-     * @var \Psr\Log\LoggerInterface
-     */
-    protected $logger;
 
     /**
      * Path to the composer binary.
@@ -96,11 +102,32 @@ abstract class Command extends BaseCommand implements CommandInterface
     protected $composerVersion = '';
 
     /**
-     * SymfonyStyle object instance.
+     * Whether or not debugging is enabled.
      *
-     * @var \Symfony\Component\Console\Style\SymfonyStyle
+     * @var bool
      */
-    protected $io;
+    public $isDebug = false;
+
+    /**
+     * Configure the command.
+     */
+    protected function configure(): void
+    {
+        // Call the specific command's configure method.
+        $this->configureCommand()
+            // Add default arguments and options.
+            ->addArgument(
+                'uri',
+                InputArgument::OPTIONAL,
+                'The URI of a specific site to update. Must match a URI in the drupalup.sites.yml file.'
+            )
+            ->addOption(
+                'debug',
+                'D',
+                InputOption::VALUE_NONE,
+                'Output additional information for debugging during operation.'
+            );
+    }
 
     /**
      * Execute the command.
@@ -117,7 +144,6 @@ abstract class Command extends BaseCommand implements CommandInterface
         $this->input = $input;
         $this->output = $output;
         $this->io = new SymfonyStyle($this->input, $this->output);
-        $this->logger = new ConsoleLogger($this->output);
         $this->loadConfiguration();
         if (!$this->validateConfiguration()) {
             return 1;
@@ -127,6 +153,10 @@ abstract class Command extends BaseCommand implements CommandInterface
         }
         // Set the options from input for the specific command.
         $this->setOptions();
+        $is_debug = $this->input->getOption('debug');
+        if (!empty($is_debug)) {
+            $this->isDebug = true;
+        }
         // Display the command announcement.
         $this->announce();
         // Set which sites to use for the command.
@@ -306,13 +336,11 @@ abstract class Command extends BaseCommand implements CommandInterface
         if (!empty($this->config['composer_path'])) {
             $this->composer = $this->config['composer_path'];
         } else {
-            // Use symfony process to locate composer executable.
-            $process = new Process(['which', 'composer']);
-            $process->run();
-            if ($process->isSuccessful()) {
-                $this->composer = trim($process->getOutput());
-            } else {
-                $this->log('Composer not found.', LogLevel::ERROR);
+            // Use Symfony ExecutableFinder to locate composer.
+            $exec_finder = new ExecutableFinder();
+            $this->composer = $exec_finder->find('composer');
+            if (empty($this->composer)) {
+                $this->io->error('Composer not found.');
                 return false;
             }
         }
@@ -352,14 +380,18 @@ abstract class Command extends BaseCommand implements CommandInterface
      *
      * @return void
      */
-    protected function log(string $message, string $logLevel): void
+    public function log(string|array $message, string $logLevel): void
     {
-        $this->logger->log($logLevel, $message);
+        if (method_exists($this->io, $logLevel)) {
+            $this->io->{$logLevel}($message);
+        } else {
+            $this->io->writeln($message);
+        }
         $log_file_path = $this->logFilePath();
         if (is_writable($log_file_path)) {
             $log_file = $log_file_path . '/drupalup.log';
             if (!is_scalar($message)) {
-                $message = json_encode(print_r($message, true));
+                $message = json_encode($message);
             }
             file_put_contents(
                 $log_file,
@@ -381,45 +413,6 @@ abstract class Command extends BaseCommand implements CommandInterface
             return str_replace('~', $_SERVER['HOME'], $this->config['log_file_path']);
         }
         return '/var/log';
-    }
-
-    /**
-     * Output a warning message.
-     *
-     * @param string $message
-     *   The message to output.
-     *
-     * @return void
-     */
-    protected function warning(string $message): void
-    {
-        $this->io->writeln('<bg=yellow;fg=black>[warning]</> ' . $message);
-    }
-
-    /**
-     * Output an info message.
-     *
-     * @param string $message
-     *   The message to output.
-     *
-     * @return void
-     */
-    protected function info(string $message): void
-    {
-        $this->io->writeln('<bg=blue;fg=white>[info]</> ' . $message);
-    }
-
-    /**
-     * Output a success message.
-     *
-     * @param string $message
-     *   The message to output.
-     *
-     * @return void
-     */
-    protected function success(string $message): void
-    {
-        $this->io->writeln('<bg=green;fg=black>[success]</> ' . $message);
     }
 
     /**
@@ -466,6 +459,51 @@ abstract class Command extends BaseCommand implements CommandInterface
                 );
                 $this->siteList = [$this->siteList[$index]];
             }
+        }
+        if (!empty($this->siteList)) {
+            $this->loadSitesToProcess();
+            if (empty($this->sitesToProcess)) {
+                $this->log('Unable to load any sites to process. See messages above for details.', LogLevel::ERROR);
+            }
+        } else {
+            $this->log('No sites found to process.', LogLevel::ERROR);
+        }
+    }
+
+    /**
+     * Load the sites to process.
+     *
+     * @return void
+     */
+    protected function loadSitesToProcess(): void
+    {
+        $this->io->section('Loading sites to process...');
+        // Using the siteList array, load the sites to process
+        // into the sitesToProcess array as Site objects.
+        foreach ($this->siteList as $site) {
+            $site = new Site($site, $this);
+            if ($site->hasErrors()) {
+                $messages = array_merge(['Skipping site: ' . implode(', ', $site->getUris())], $site->getErrors());
+                $this->log($messages, LogLevel::WARNING);
+                $this->io->newLine();
+            } else {
+                $this->sitesToProcess[] = $site;
+            }
+        }
+    }
+
+    /**
+     * Output a debug message if in debug mode.
+     *
+     * @param string|array $message
+     *   The message to output.
+     *
+     * @return void
+     */
+    public function debug(string|array $message): void
+    {
+        if ($this->isDebug) {
+            $this->debugOutput($message);
         }
     }
 }
