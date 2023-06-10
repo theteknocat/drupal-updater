@@ -118,7 +118,11 @@ abstract class Command extends BaseCommand implements CommandInterface
         }
         // Set the options from input for the specific command.
         $this->setOptions();
+        // Display the command announcement.
         $this->announce();
+        // Set which sites to use for the command.
+        $this->setSitesToUse();
+        // Run the command.
         $commandMethod = 'run' . ucfirst($this->getName());
         return $this->{$commandMethod}();
     }
@@ -413,15 +417,49 @@ abstract class Command extends BaseCommand implements CommandInterface
     }
 
     /**
-     * Output a success message.
+     * Determine which sites to run the command on.
      *
-     * @param string $message
-     *   The message to output.
+     * If a URI is provided, remove all other sites from the list.
+     * If the list option was specified, list all sites and request input.
      *
      * @return void
      */
-    protected function success(string $message): void
+    protected function setSitesToUse(): void
     {
-        $this->output->writeln('<fg=green>[success]</> ' . $message);
+        $uri = $this->input->getArgument('uri');
+        if (!empty($uri)) {
+            // Find the URI in the siteList array and remove all others.
+            $this->siteList = array_filter(
+                $this->siteList,
+                function ($site) use ($uri) {
+                    return $site['uri'] === $uri;
+                }
+            );
+        } else {
+            // If the list option was specified, list all sites and request input.
+            // The input should collect the index of the site to update.
+            // If the command requested is "rollback" then this is required.
+            if ($this->getName() == 'rollback' || $this->input->getOption('list')) {
+                $this->io->section('Available sites:');
+                foreach ($this->siteList as $index => $site) {
+                    $this->io->writeln('[<fg=yellow>' . $index . '</>]: ' . $site['uri']);
+                }
+                $allowed_choices = array_keys($this->siteList);
+                $index = $this->io->ask(
+                    'Enter the number of the site to ' . $this->getName(),
+                    null,
+                    function ($answer) use ($allowed_choices) {
+                        if (!is_numeric($answer)) {
+                            throw new \RuntimeException('Please enter a number.');
+                        }
+                        if (!in_array($answer, $allowed_choices)) {
+                            throw new \RuntimeException('Invalid site number.');
+                        }
+                        return $answer;
+                    }
+                );
+                $this->siteList = [$this->siteList[$index]];
+            }
+        }
     }
 }
