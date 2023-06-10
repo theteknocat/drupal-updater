@@ -75,7 +75,3 @@ Options:
 * `<uri>` - Optional. Must match a URI in the drupalup.sites.yml file. If not supplied, all available sites will be listed for the user to choose the one to rollback.
 
 The rollback process will fail if the source is not currently on either the updates or master branch or there is no database backup file found.
-
-## Composer and Drush
-
-The script will only be able to work if both of these
