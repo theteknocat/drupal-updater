@@ -42,6 +42,12 @@ class Update extends Command
                 InputOption::VALUE_NONE,
                 'Send an email notification on completion.'
             )
+            ->addOption(
+                'list',
+                'L',
+                InputOption::VALUE_NONE,
+                'List all sites and request input on which one to update. Ignored if a uri is provided.'
+            )
             ->addArgument(
                 'uri',
                 InputArgument::OPTIONAL,
