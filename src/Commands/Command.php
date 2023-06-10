@@ -143,16 +143,12 @@ abstract class Command extends BaseCommand implements CommandInterface
     {
         $app = $this->getApplication();
         $this->io->title($app->getName() . ' v' . $app->getVersion());
-        $this->io->text('<fg=bright-blue>Command:</> ' . $this->getName());
-        $this->io->newLine();
-        $this->io->text('<fg=bright-blue>Config file:</>');
-        $this->io->text('  ' . $this->configFilePath);
-        $this->io->text('<fg=bright-blue>Sites list:</>');
-        $this->io->text('  ' . $this->sitesFilePath);
-        $this->io->text('<fg=bright-blue>Composer:</>');
-        $this->io->text('  ' . $this->composer . ' (v' . $this->composerVersion . ')');
-        $this->io->text('<fg=bright-blue>Log file:</>');
-        $this->io->text('  ' . $this->config['log_file_path']);
+        $this->io->text([
+            '<fg=bright-blue>Config file:</> ' . $this->configFilePath,
+            '<fg=bright-blue>Sites list:</>  ' . $this->sitesFilePath,
+            '<fg=bright-blue>Composer:</>    ' . $this->composer . ' (v' . $this->composerVersion . ')',
+            '<fg=bright-blue>Log file:</>    ' . $this->config['log_file_path'],
+        ]);
         $this->io->newLine();
     }
 
