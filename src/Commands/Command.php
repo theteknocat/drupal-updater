@@ -348,6 +348,9 @@ abstract class Command extends BaseCommand implements CommandInterface
         $log_file_path = $this->logFilePath();
         if (is_writable($log_file_path)) {
             $log_file = $log_file_path . '/drupalup.log';
+            if (!is_scalar($message)) {
+                $message = json_encode(print_r($message, true));
+            }
             file_put_contents(
                 $log_file,
                 '[' . date('Y-m-d H:i:s') . '] ' . strtoupper($logLevel) . ': ' . $message . PHP_EOL,
