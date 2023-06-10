@@ -51,9 +51,9 @@ This is still a work in progress, but this is what the expected commands will be
 
 ### Update Sites
 
-Runs the drupal updates on all the sites in the drupalup.sites.yml file. This is the default command and does not have to be supplied as an argument when calling the script.
+Runs the drupal updates on all the sites in the drupalup.sites.yml file. This is the default command and does not have to be supplied as an argument when calling the script. This is the default command.
 
-Command: `drupalup update`
+Command: `drupalup [update]`
 
 Options:
 
