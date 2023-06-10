@@ -62,14 +62,14 @@ class Update extends Command
     {
         parent::announce();
         if ($this->isDryRun) {
-            $this->info('Dry-run mode - git changes <bold>will not be</bold> committed or pushed.');
+            $this->info('Dry-run mode - git changes <options=bold>will not be</> committed or pushed.');
         } else {
-            $this->info('Git changes <bold>will be</bold> committed and pushed.');
+            $this->info('Git changes <options=bold>will be</> committed and pushed.');
         }
         if ($this->notify) {
-            $this->info('Email notification <bold>will be</bold> sent on completion.');
+            $this->info('Email notification <options=bold>will be</> sent on completion.');
         } else {
-            $this->info('Email notification <bold>will not be</bold> sent on completion.');
+            $this->info('Email notification <options=bold>will not be</> sent on completion.');
         }
         $this->io->newLine();
     }
