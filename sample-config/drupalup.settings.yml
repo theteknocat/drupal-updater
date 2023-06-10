@@ -1,3 +1,6 @@
+# OPTIONAL: path to the composer binary file to use. If not specified, the script will
+# attempt to locate it or failing that will call it without a path.
+composer_path: ''
 # OPTIONAL: path in which to write log files. If not specified, the script will attempt to use /var/log.
 # If the destination is not writable, no log will be recorded and the email notification will mention this.
 # NOTE: NO TRAILING SLASH!

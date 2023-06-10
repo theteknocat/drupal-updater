@@ -72,6 +72,19 @@ abstract class Command extends BaseCommand implements CommandInterface
      */
     protected $logger;
 
+    /**
+     * Path to the composer binary.
+     *
+     * @var string
+     */
+    protected $composer = '';
+
+    /**
+     * The composer version. Used for display purposes.
+     *
+     * @var string
+     */
+    protected $composerVersion = '';
 
     /**
      * SymfonyStyle object instance.
@@ -100,6 +113,10 @@ abstract class Command extends BaseCommand implements CommandInterface
         if (!$this->validateConfiguration()) {
             return 1;
         }
+        if (!$this->locateComposer()) {
+            return 1;
+        }
+        // Set the options from input for the specific command.
         $this->setOptions();
         $this->announce();
         $commandMethod = 'run' . ucfirst($this->getName());
@@ -267,6 +284,52 @@ abstract class Command extends BaseCommand implements CommandInterface
         }
 
         return $valid_config;
+    }
+
+    /**
+     * Locate composer and ensure it is the right version.
+     *
+     * @return bool
+     *   TRUE if composer is found and the correct version, FALSE otherwise.
+     */
+    protected function locateComposer(): bool
+    {
+        if (!empty($this->config['composer_path'])) {
+            $this->composer = $this->config['composer_path'];
+        } else {
+            // Use symfony process to locate composer executable.
+            $process = new Process(['which', 'composer']);
+            $process->run();
+            if ($process->isSuccessful()) {
+                $this->composer = trim($process->getOutput());
+            } else {
+                $this->log('Composer not found.', LogLevel::ERROR);
+                return false;
+            }
+        }
+        // Check composer version.
+        $process = new Process([$this->composer, '--version']);
+        $process->run();
+        if ($process->isSuccessful()) {
+            $version = trim($process->getOutput());
+            if (preg_match('/^Composer version ([0-9\.]+) .*$/', $version, $matches)) {
+                $this->composerVersion = $matches[1];
+                if (version_compare($this->composerVersion, '2.3.6', '<')) {
+                    $this->log(
+                        'Composer version ' . $this->composerVersion . ' found. Version 2.3.6 or greater is required.',
+                        LogLevel::ERROR
+                    );
+                    return false;
+                }
+            } else {
+                $this->log('Unable to determine composer version.', LogLevel::ERROR);
+                return false;
+            }
+        } else {
+            $this->log('Unable to determine composer version.', LogLevel::ERROR);
+            return false;
+        }
+        return true;
     }
 
     /**
