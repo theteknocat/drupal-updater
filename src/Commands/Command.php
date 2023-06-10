@@ -7,6 +7,8 @@ use Symfony\Component\Console\Command\Command as BaseCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Process\Process;
 use Symfony\Component\Validator\Constraints\Email;
 use Symfony\Component\Validator\Validation;
 use Symfony\Component\Yaml\Yaml;
@@ -70,6 +72,14 @@ abstract class Command extends BaseCommand implements CommandInterface
      */
     protected $logger;
 
+
+    /**
+     * SymfonyStyle object instance.
+     *
+     * @var \Symfony\Component\Console\Style\SymfonyStyle
+     */
+    protected $io;
+
     /**
      * Execute the command.
      *
@@ -84,6 +94,7 @@ abstract class Command extends BaseCommand implements CommandInterface
     {
         $this->input = $input;
         $this->output = $output;
+        $this->io = new SymfonyStyle($this->input, $this->output);
         $this->logger = new ConsoleLogger($this->output);
         $this->loadConfiguration();
         if (!$this->validateConfiguration()) {
@@ -93,6 +104,26 @@ abstract class Command extends BaseCommand implements CommandInterface
         $this->announce();
         $commandMethod = 'run' . ucfirst($this->getName());
         return $this->{$commandMethod}();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function announce(): void
+    {
+        $app = $this->getApplication();
+        $this->io->title($app->getName() . ' v' . $app->getVersion());
+        $this->io->text('<fg=bright-blue>Command:</> ' . $this->getName());
+        $this->io->newLine();
+        $this->io->text('<fg=bright-blue>Config file:</>');
+        $this->io->text('  ' . $this->configFilePath);
+        $this->io->text('<fg=bright-blue>Sites list:</>');
+        $this->io->text('  ' . $this->sitesFilePath);
+        $this->io->text('<fg=bright-blue>Composer:</>');
+        $this->io->text('  ' . $this->composer . ' (v' . $this->composerVersion . ')');
+        $this->io->text('<fg=bright-blue>Log file:</>');
+        $this->io->text('  ' . $this->config['log_file_path']);
+        $this->io->newLine();
     }
 
     /**
@@ -141,7 +172,7 @@ abstract class Command extends BaseCommand implements CommandInterface
 
         $log_file_path = $this->logFilePath();
         if (!is_writable($log_file_path)) {
-            $this->notice('Log file path is not writable. Log file will not be written.');
+            $this->warning('Log file path is not writable. Log file will not be written.');
         }
 
         $validator = Validation::createValidator();
@@ -277,29 +308,16 @@ abstract class Command extends BaseCommand implements CommandInterface
     }
 
     /**
-     * Output an error message.
+     * Output a warning message.
      *
      * @param string $message
      *   The message to output.
      *
      * @return void
      */
-    protected function error(string $message): void
+    protected function warning(string $message): void
     {
-        $this->output->writeln('<fg=red>[error]</> ' . $message);
-    }
-
-    /**
-     * Output a notice message.
-     *
-     * @param string $message
-     *   The message to output.
-     *
-     * @return void
-     */
-    protected function notice(string $message): void
-    {
-        $this->output->writeln('<fg=yellow>[notice]</> ' . $message);
+        $this->io->writeln('<bg=yellow;fg=black>[warning]</> ' . $message);
     }
 
     /**
@@ -312,7 +330,20 @@ abstract class Command extends BaseCommand implements CommandInterface
      */
     protected function info(string $message): void
     {
-        $this->output->writeln('<fg=blue>[info]</> ' . $message);
+        $this->io->writeln('<bg=blue;fg=white>[info]</> ' . $message);
+    }
+
+    /**
+     * Output a success message.
+     *
+     * @param string $message
+     *   The message to output.
+     *
+     * @return void
+     */
+    protected function success(string $message): void
+    {
+        $this->io->writeln('<bg=green;fg=black>[success]</> ' . $message);
     }
 
     /**

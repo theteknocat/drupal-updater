@@ -54,20 +54,18 @@ class Update extends Command
      */
     public function announce(): void
     {
-        $this->output->writeln('Using configuration file: ' . $this->configFilePath);
-        $this->output->writeln('Using sites file:         ' . $this->sitesFilePath);
-        $this->output->writeln('');
+        parent::announce();
         if ($this->isDryRun) {
-            $this->info('Running in dry-run mode. No git changes will be committed or pushed.');
+            $this->info('Dry-run mode - git changes <bold>will not be</bold> committed or pushed.');
         } else {
-            $this->info('Git changes will be committed and pushed.');
+            $this->info('Git changes <bold>will be</bold> committed and pushed.');
         }
         if ($this->notify) {
-            $this->info('Email notification will be sent on completion.');
+            $this->info('Email notification <bold>will be</bold> sent on completion.');
         } else {
-            $this->info('Email notification will not be sent on completion.');
+            $this->info('Email notification <bold>will not be</bold> sent on completion.');
         }
-        $this->output->writeln('');
+        $this->io->newLine();
     }
 
     /**
@@ -88,8 +86,8 @@ class Update extends Command
      */
     protected function runUpdate(): int
     {
-        $this->info('Running update...');
-        $this->info('Updates complete...');
+        $this->io->section('Starting updates...');
+        $this->io->section('Updates complete.');
         return 0;
     }
 }
