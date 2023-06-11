@@ -15,7 +15,7 @@ class Site
      *
      * @var array
      */
-    protected $uris = [];
+    protected array $uris = [];
 
     /**
      * Whether or not the site is a multisite.
@@ -25,28 +25,28 @@ class Site
      *
      * @var bool
      */
-    protected $isMultisite = false;
+    protected bool $isMultisite = false;
 
     /**
      * The path to the site.
      *
      * @var string
      */
-    protected $path;
+    protected string $path;
 
     /**
      * The site's prod alias name to match.
      *
      * @var string
      */
-    protected $prodAliasNameMatch;
+    protected string $prodAliasNameMatch;
 
     /**
      * The path to the site's drush executable.
      *
      * @var string
      */
-    protected $drushPath;
+    protected string $drushPath;
 
     /**
      * The site's status(es) obtained from drush status.
@@ -56,35 +56,35 @@ class Site
      *
      * @var array
      */
-    protected $siteStatuses = [];
+    protected array $siteStatuses = [];
 
     /**
      * The site's aliases obtained from drush sa.
      *
      * @var array
      */
-    protected $siteAliases = [];
+    protected array $siteAliases = [];
 
     /**
      * List of errors that occurred while processing the site.
      *
      * @var array
      */
-    protected $errors = [];
+    protected array $errors = [];
 
     /**
      * Instance of the current command object.
      *
      * @var \TheTeknocat\DrupalUp\Commands\Command
      */
-    protected $command;
+    protected Command $command;
 
     /**
      * The results of the command run against the site.
      *
      * @var array
      */
-    protected $commandResults = [];
+    protected array $commandResults = [];
 
     /**
      * Construct a site object and initialize its properties.

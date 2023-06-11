@@ -13,14 +13,14 @@ class Update extends Command
      *
      * @var bool
      */
-    protected $isDryRun = false;
+    protected bool $isDryRun = false;
 
     /**
      * Whether or not to send an email notification.
      *
      * @var bool
      */
-    protected $notify = false;
+    protected bool $notify = false;
 
     /**
      * {@inheritdoc}

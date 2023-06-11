@@ -34,17 +34,7 @@ abstract class Command extends BaseCommand implements CommandInterface
      */
     const MIN_COMPOSER_VERSION = '2.3.6';
 
-    /**
-     * The config array, loaded from the yml file.
-     *
-     * @var array
-     */
-    protected $config = [];
-
-    /**
-     * Possible config file path locations.
-     */
-    protected $configFilePaths = [
+    const CONFIG_FILE_PATHS = [
         '<home>/drupalup/',
         '<home>/',
         '/usr/local/etc/drupalup/',
@@ -52,68 +42,75 @@ abstract class Command extends BaseCommand implements CommandInterface
     ];
 
     /**
+     * The config array, loaded from the yml file.
+     *
+     * @var array
+     */
+    protected array $config = [];
+
+    /**
      * Path to configuration file.
      */
-    protected $configFilePath = '';
+    protected string $configFilePath = '';
 
     /**
      * Path to the sites list file.
      */
-    protected $sitesFilePath = '';
+    protected string $sitesFilePath = '';
 
     /**
      * List of the sites to update.
      */
-    protected $siteList = [];
+    protected array $siteList = [];
 
     /**
      * The sites to process.
      *
      * @var \TheTeknocat\DrupalUp\Commands\Models\Site[]
      */
-    protected $sitesToProcess = [];
+    protected array $sitesToProcess = [];
 
     /**
      * The input object.
      *
      * @var \Symfony\Component\Console\Input\InputInterface
      */
-    protected $input;
+    protected InputInterface $input;
 
     /**
      * The output object.
      *
      * @var \Symfony\Component\Console\Output\OutputInterface
      */
-    protected $output;
+    protected OutputInterface $output;
 
     /**
      * Path to the git binary.
      *
      * @var string
      */
-    protected $git = '';
+    protected string $git = '';
 
     /**
      * Path to the composer binary.
      *
      * @var string
      */
-    protected $composer = '';
+    protected string $composer = '';
 
     /**
      * The composer version. Used for display purposes.
      *
      * @var string
      */
-    protected $composerVersion = '';
+    protected string $composerVersion = '';
 
     /**
      * Whether or not debugging is enabled.
      *
      * @var bool
      */
-    public $isDebug = false;
+    public bool $isDebug = false;
 
     /**
      * Whether or not a log for this command has been started.
@@ -124,7 +121,7 @@ abstract class Command extends BaseCommand implements CommandInterface
      *
      * @var bool
      */
-    protected $logStarted = false;
+    protected bool $logStarted = false;
 
     /**
      * Configure the command.
@@ -205,7 +202,7 @@ abstract class Command extends BaseCommand implements CommandInterface
     {
         $config_loaded = false;
         $sites_loaded = false;
-        foreach ($this->configFilePaths as $base_path) {
+        foreach (self::CONFIG_FILE_PATHS as $base_path) {
             $base_path = str_replace('<home>', $_SERVER['HOME'], $base_path);
             $config_file_path = $base_path . 'drupalup.settings.yml';
             $sites_file_path = $base_path . 'drupalup.sites.yml';

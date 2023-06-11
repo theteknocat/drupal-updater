@@ -2,6 +2,8 @@
 
 namespace TheTeknocat\DrupalUp\Commands\Traits;
 
+use Symfony\Component\Console\Style\SymfonyStyle;
+
 /**
  * Provide some message output methods.
  *
@@ -15,7 +17,7 @@ trait MessagesTrait
      *
      * @var \Symfony\Component\Console\Style\SymfonyStyle
      */
-    public $io;
+    public SymfonyStyle $io;
 
     /**
      * Output a warning message.
