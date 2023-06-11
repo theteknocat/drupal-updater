@@ -88,6 +88,13 @@ abstract class Command extends BaseCommand implements CommandInterface
     protected $output;
 
     /**
+     * Path to the git binary.
+     *
+     * @var string
+     */
+    protected $git = '';
+
+    /**
      * Path to the composer binary.
      *
      * @var string
@@ -156,10 +163,7 @@ abstract class Command extends BaseCommand implements CommandInterface
         $this->output = $output;
         $this->io = new SymfonyStyle($this->input, $this->output);
         $this->loadConfiguration();
-        if (!$this->validateConfiguration()) {
-            return 1;
-        }
-        if (!$this->locateComposer()) {
+        if (!$this->validateConfiguration() || !$this->locateGit() || !$this->locateComposer()) {
             return 1;
         }
         // Set the options from input for the specific command.
@@ -335,6 +339,32 @@ abstract class Command extends BaseCommand implements CommandInterface
         return $valid_config;
     }
 
+    /**
+     * Locate the git executable.
+     *
+     * @return bool
+     *   TRUE if git was located, FALSE otherwise.
+     */
+    protected function locateGit(): bool
+    {
+        if (!empty($this->config['git_path'])) {
+            $this->git = $this->config['git_path'];
+        } else {
+            // Use Symfony ExecutableFinder to locate git.
+            $exec_finder = new ExecutableFinder();
+            $this->git = $exec_finder->find('git');
+            if (empty($this->git)) {
+                $this->io->error('Git not found.');
+                return false;
+            }
+        }
+        // Call git --version to ensure it is working.
+        $process = new Process([$this->git, '--version']);
+        $process->run();
+        return $process->isSuccessful();
+    }
+
+    /**
     /**
      * Locate composer and ensure it is the right version.
      *
