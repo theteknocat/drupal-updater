@@ -81,11 +81,9 @@ class Update extends Command
     }
 
     /**
-     * Run the update command.
-     *
-     * @return int
+     * {@inheritdoc}
      */
-    protected function runUpdate(): int
+    public function runCommand(): int
     {
         if (!empty($this->sitesToProcess)) {
             foreach ($this->sitesToProcess as $site) {

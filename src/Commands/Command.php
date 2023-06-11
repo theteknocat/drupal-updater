@@ -173,8 +173,7 @@ abstract class Command extends BaseCommand implements CommandInterface
         // Set which sites to use for the command.
         $this->setSitesToUse();
         // Run the command.
-        $commandMethod = 'run' . ucfirst($this->getName());
-        return $this->{$commandMethod}();
+        return $this->runCommand();
     }
 
     /**

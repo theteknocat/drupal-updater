@@ -33,4 +33,14 @@ interface CommandInterface
      * @return void
      */
     public function setOptions(): void;
+
+    /**
+     * Run the actual command.
+     *
+     * This will be called by the parent class's run method.
+     *
+     * @return int
+     *   The exit code.
+     */
+    public function runCommand(): int;
 }
