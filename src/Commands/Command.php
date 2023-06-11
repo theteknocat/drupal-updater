@@ -340,6 +340,17 @@ abstract class Command extends BaseCommand implements CommandInterface
     }
 
     /**
+     * Get the path to the git binary.
+     *
+     * @return string
+     *   The path to the git binary.
+     */
+    public function git(): string
+    {
+        return $this->git;
+    }
+
+    /**
      * Locate the git executable.
      *
      * @return bool
@@ -365,6 +376,16 @@ abstract class Command extends BaseCommand implements CommandInterface
     }
 
     /**
+     * Get the path to the composer binary.
+     *
+     * @return string
+     *   The path to the composer binary.
+     */
+    public function composer(): string
+    {
+        return $this->composer;
+    }
+
     /**
      * Locate composer and ensure it is the right version.
      *
