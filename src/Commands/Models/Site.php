@@ -80,6 +80,13 @@ class Site
     protected $command;
 
     /**
+     * The results of the command run against the site.
+     *
+     * @var array
+     */
+    protected $commandResults = [];
+
+    /**
      * Construct a site object and initialize its properties.
      *
      * @param array $siteInfo
@@ -357,15 +364,251 @@ class Site
     }
 
     /**
+     * Determine if the codebase is clean.
+     *
+     * @param string|array $allowedBranches
+     *   The allowed git branches.
+     *
+     * @return bool
+     *   TRUE if the codebase is clean, FALSE otherwise.
+     */
+    public function ensureCleanGitRepo(string|array $allowedBranches): bool
+    {
+        if (is_string($allowedBranches)) {
+            $allowedBranches = [$allowedBranches];
+        }
+        $this->command->info('Checking for valid git repository and clean codebase...');
+        $this->command->io->newLine();
+        $this->command->io->progressStart(4);
+        // First just make sure we actually have a git repo.
+        $process = new Process([$this->command->git(), 'status', '--short']);
+        $process->run();
+        $this->command->io->progressAdvance();
+        if (!$process->isSuccessful()) {
+            $this->errors[] = 'The site does not have a git repository: ' . $process->getErrorOutput();
+            $this->command->io->progressFinish();
+            return false;
+        }
+        $output = $process->getOutput();
+        if (!empty($output)) {
+            $this->errors[] = 'The site codebase contains uncommitted changes:' . PHP_EOL . $output;
+            $this->command->io->progressFinish();
+            return false;
+        }
+        $this->command->io->progressAdvance();
+        if (!$this->isOnAllowedBranch($allowedBranches)) {
+            $this->errors[] = 'The current working copy of the site is not on an allowed branch: '
+                . implode(', ', $allowedBranches);
+            $this->command->io->progressFinish();
+            return false;
+        }
+        $this->command->io->progressAdvance();
+        // Now ensure the current branch is up-to-date.
+        $process = new Process([$this->command->git(), 'pull']);
+        $process->run();
+        if (!$process->isSuccessful()) {
+            $this->errors[] = 'Failed to pull the latest changes from the git repository: '
+                . $process->getErrorOutput();
+            $this->command->io->progressFinish();
+            return false;
+        }
+        $this->command->io->progressAdvance();
+        $this->command->io->progressFinish();
+        $this->command->success('Codebase is clean!');
+        $this->command->io->newLine();
+        return true;
+    }
+
+    /**
+     * Determine if the current git branch is allowed.
+     *
+     * @param string|array $allowedBranches
+     *   The allowed git branches.
+     *
+     * @return bool
+     *   TRUE if the current git branch is allowed, FALSE otherwise.
+     */
+    public function isOnAllowedBranch(string|array $allowedBranches): bool
+    {
+        $process = new Process([$this->command->git(), 'branch', '--show-current']);
+        $process->run();
+        if (!$process->isSuccessful()) {
+            $this->errors[] = 'Failed to determine the current git branch.';
+            return false;
+        }
+        $currentBranch = trim($process->getOutput());
+        if (is_array($allowedBranches)) {
+            return in_array($currentBranch, $allowedBranches);
+        }
+        return $currentBranch == $allowedBranches;
+    }
+
+    /**
+     * Sync the production database for the site.
+     *
+     * Will only sync the database if the site has a prod alias.
+     *
+     * @return bool
+     *   TRUE if the database was synced successfully, FALSE otherwise.
+     */
+    public function syncProdDatabase(): void
+    {
+        foreach ($this->siteAliases as $uri => $alias) {
+            $errors = false;
+            $this->command->info('Sync and sanitize production database from ' . $alias . ' for ' . $uri . '...');
+            $this->command->io->newLine();
+            $process = $this->runDrushCommand('sql-sync', [
+                $alias,
+                '@self',
+                '--uri=' . $uri,
+            ], 300, true);
+            if ($process->isSuccessful()) {
+                $this->command->success('Sync complete, Sanitizing...');
+                $this->command->io->newLine();
+                $this->command->io->progressStart(3);
+                // Run the drush sql-sanitize command.
+                $process2 = $this->runDrushCommand('sql-sanitize', [
+                    '--uri=' . $uri,
+                ]);
+                if ($process2->isSuccessful()) {
+                    $this->command->io->progressAdvance();
+                    // Now rebuild the cache and import configuration.
+                    // We won't bother checking the success of the cache rebuild.
+                    $this->runDrushCommand('cr', [
+                        '--uri=' . $uri,
+                    ]);
+                    $this->command->io->progressAdvance();
+                    $process3 = $this->runDrushCommand('cim', [
+                        '--uri=' . $uri,
+                    ]);
+                    if ($process3->isSuccessful()) {
+                        $this->command->io->progressAdvance();
+                        $this->commandResults[$uri]['messages'][] = 'Database synced and sanitized from '
+                            . $alias . ' for ' . $uri;
+                    } else {
+                        $errors = true;
+                        // Put the error in the errors array.
+                        $this->errors[] = 'Failed to import configuration for ' . $uri . ': '
+                            . $process3->getErrorOutput();
+                    }
+                } else {
+                    $errors = true;
+                    // Put the error in the errors array.
+                    $this->errors[] = 'Failed to sanitize database from ' . $alias . ' '
+                    . $uri . ': ' . $process2->getErrorOutput();
+                }
+                $this->command->io->progressFinish();
+                if (!$errors) {
+                    $this->command->success('Sanitization complete!');
+                    $this->command->io->newLine();
+                }
+            } else {
+                // Put the error in the errors array.
+                $this->errors[] = 'Failed to sync database from ' . $alias . ' '
+                    . $uri . ': ' . $process->getErrorOutput();
+            }
+        }
+    }
+
+    /**
+     * Backup the database for the site.
+     *
+     * @return void
+     */
+    public function backupDatabase(): void
+    {
+        foreach ($this->siteAliases as $uri => $alias) {
+            $this->command->info('Backup database for ' . $uri . '...');
+            $this->command->io->newLine();
+            // Run the drush sql-dump command.
+            $backup_directory = $this->backupDirectory($uri);
+            if (!$backup_directory) {
+                $this->errors[] = 'Failed to establish backup directory for ' . $uri;
+                break;
+            }
+            $process = $this->runDrushCommand('sql-dump', [
+                '--result-file=' . $backup_directory . '/db-backup.sql',
+                '--uri=' . $uri,
+            ]);
+            if ($process->isSuccessful()) {
+                $this->commandResults[$uri]['messages'][] = 'Database backed up to '
+                    . $backup_directory . '/' . $uri . '.sql';
+                $this->command->success('Database backed up to ' . $backup_directory . '/db-backup.sql');
+            } else {
+                // Put the error in the errors array.
+                $this->errors[] = 'Failed to backup database for ' . $uri . ': '
+                    . $process->getErrorOutput();
+            }
+        }
+    }
+
+    /**
+     * Determine the backup directory for a given URI.
+     *
+     * @param string $uri
+     *   The URI of the site.
+     *
+     * @return string|false
+     *   The backup directory, or FALSE if it could not be created.
+     */
+    protected function backupDirectory(string $uri): string|false
+    {
+        $full_db_backup_path = $this->siteStatuses[$uri]['root']
+        . '/' . $this->siteStatuses[$uri]['files'] . '/database-backups'
+        . '/' . $uri;
+        if (!is_dir($full_db_backup_path)) {
+            // If the directory does not exist, create it.
+            if (!mkdir($full_db_backup_path, 0755, true)) {
+                $this->errors[] = 'Could not create directory for database backup: ' . $full_db_backup_path;
+                return false;
+            }
+        }
+        return $full_db_backup_path;
+    }
+
+    /**
      * Run a drush command and return the process.
      *
+     * Note that the --root and --yes options are always added.
+     *
+     * @param string $command
+     *   The drush command to run.
+     * @param array $options
+     *   An array of options to pass to the command.
+     * @param int $timeout
+     *   The timeout for the command.
+     *
      * @return \Symfony\Component\Process\Process
+     *   An instance of the Symfony Process object.
      */
-    protected function runDrushCommand(string $command, array $options = []): \Symfony\Component\Process\Process
-    {
-        $options = array_merge([$this->drushPath, $command, '--root=' . $this->path], $options);
+    protected function runDrushCommand(
+        string $command,
+        array $options = [],
+        int $timeout = 60,
+        bool $streamOutput = false
+    ): Process {
+        $options = array_merge(
+            // Start with the drush executable and the command.
+            [$this->drushPath, $command],
+            // Add the options.
+            $options,
+            // Add the root and yes options.
+            ['--root=' . $this->path, '--yes']
+        );
         $process = new Process($options);
-        $process->run();
+        $process->setTimeout($timeout);
+        if ($streamOutput) {
+            $process->run(function ($type, $buffer) {
+                // Trim the buffer and break on newlines:
+                $buffer_lines = explode("\n", trim($buffer));
+                foreach ($buffer_lines as $line) {
+                    $this->command->io->text('  <fg=blue>|</> ' . trim($line));
+                }
+            });
+            $this->command->io->newLine();
+        } else {
+            $process->run();
+        }
         return $process;
     }
 }

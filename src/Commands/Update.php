@@ -2,7 +2,9 @@
 
 namespace TheTeknocat\DrupalUp\Commands;
 
+use Psr\Log\LogLevel;
 use Symfony\Component\Console\Input\InputOption;
+use TheTeknocat\DrupalUp\Commands\Models\Site;
 
 class Update extends Command
 {
@@ -104,6 +106,34 @@ class Update extends Command
      */
     protected function updateSite(Site $site): bool
     {
+        $site->announce('Update');
+
+        if (!$site->ensureCleanGitRepo($this->config['git']['main_branch'])) {
+            $this->log($site->getErrors(), LogLevel::ERROR);
+            $this->warning('Site ' . implode(', ', $site->getUris()) . ' is not on the '
+                . $this->config['git']['main_branch']
+                . ' branch and/or has uncommitted changes. Skipping.');
+            return false;
+        }
+
+        $site->syncProdDatabase();
+
+        if ($site->hasErrors()) {
+            $this->log($site->getErrors(), LogLevel::ERROR, true);
+            $this->warning('Errors occurred syncing database: ' . implode(', ', $site->getUris())
+                    . '. See the log file for details.');
+            return false;
+        }
+
+        $site->backupDatabase();
+
+        if ($site->hasErrors()) {
+            $this->log($site->getErrors(), LogLevel::ERROR, true);
+            $this->warning('Errors occurred backing up database: ' . implode(', ', $site->getUris())
+                    . '. See the log file for details.');
+            return false;
+        }
+
         return true;
     }
 }
