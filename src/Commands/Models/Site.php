@@ -560,7 +560,9 @@ class Site
             if ($process->isSuccessful()) {
                 $this->commandResults[$uri]['messages'][] = 'Database backed up to '
                     . $backup_directory . '/' . $uri . '.sql';
-                $this->command->success('Database backed up to ' . $backup_directory . '/db-backup.sql');
+                $this->command->success('Database backed up to:');
+                $this->command->io->text($backup_directory . '/db-backup.sql');
+                $this->command->io->newLine();
             } else {
                 // Put the error in the errors array.
                 $this->errors[] = 'Failed to backup database for ' . $uri . ': '

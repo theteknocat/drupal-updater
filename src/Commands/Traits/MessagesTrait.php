@@ -29,7 +29,7 @@ trait MessagesTrait
      */
     public function warning(string $message): void
     {
-        $this->io->writeln('<bg=yellow;fg=black>[warning]</> ' . $message);
+        $this->io->writeln('<bg=yellow;fg=black>[warning]</> <fg=yellow;bg=default>' . $message . '</>');
     }
 
     /**
@@ -55,7 +55,7 @@ trait MessagesTrait
      */
     public function success(string $message): void
     {
-        $this->io->writeln('<bg=green;fg=black>[success]</> ' . $message);
+        $this->io->writeln('<bg=green;fg=black>[success]</> <fg=green;bg=default>' . $message . '</>');
     }
 
     /**
