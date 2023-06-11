@@ -400,13 +400,16 @@ class Site
         $process->run();
         $this->command->io->progressAdvance();
         if (!$process->isSuccessful()) {
-            $this->errors[] = 'The site does not have a git repository: ' . $process->getErrorOutput();
+            $this->errors[] = 'The site does not have a git repository:';
+            $this->errors[] = $process->getErrorOutput();
             $this->command->io->progressFinish();
             return false;
         }
         $output = $process->getOutput();
         if (!empty($output)) {
-            $this->errors[] = 'The site codebase contains uncommitted changes:' . PHP_EOL . $output;
+            $this->errors[] = 'The site codebase contains uncommitted changes:';
+            $log_output = array_map('trim', explode("\n", trim($output)));
+            $this->errors = array_merge($this->errors, $log_output);
             $this->command->io->progressFinish();
             return false;
         }
@@ -422,8 +425,8 @@ class Site
         $process = new Process([$this->command->git(), 'pull']);
         $process->run();
         if (!$process->isSuccessful()) {
-            $this->errors[] = 'Failed to pull the latest changes from the git repository: '
-                . $process->getErrorOutput();
+            $this->errors[] = 'Failed to pull the latest changes from the git repository:';
+            $this->errors[] = $process->getErrorOutput();
             $this->command->io->progressFinish();
             return false;
         }
