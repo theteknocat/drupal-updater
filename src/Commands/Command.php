@@ -501,8 +501,7 @@ abstract class Command extends BaseCommand implements CommandInterface
         // Using the siteList array, load the sites to process
         // into the sitesToProcess array as Site objects.
         $sites_skipped = [];
-        $this->io->progressStart(count($this->siteList));
-        foreach ($this->siteList as $site) {
+        foreach ($this->io->progressIterate($this->siteList) as $site) {
             $site = new Site($site, $this);
             if ($site->hasErrors()) {
                 $sites_skipped[] = $site;
@@ -514,9 +513,7 @@ abstract class Command extends BaseCommand implements CommandInterface
             } else {
                 $this->sitesToProcess[] = $site;
             }
-            $this->io->progressAdvance();
         }
-        $this->io->progressFinish();
         $this->info(count($this->sitesToProcess) . ' sites successfully validated.');
         if (!empty($sites_skipped)) {
             $this->io->newLine();
