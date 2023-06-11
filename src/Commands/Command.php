@@ -109,6 +109,17 @@ abstract class Command extends BaseCommand implements CommandInterface
     public $isDebug = false;
 
     /**
+     * Whether or not a log for this command has been started.
+     *
+     * If false, the first time a message is logged it will put
+     * in a marker message to indicate the start of the log for
+     * this command.
+     *
+     * @var bool
+     */
+    protected $logStarted = false;
+
+    /**
      * Configure the command.
      */
     protected function configure(): void
@@ -377,15 +388,23 @@ abstract class Command extends BaseCommand implements CommandInterface
      *   The message to log.
      * @param string $logLevel
      *   The log level. Must be one of the \Psr\Log\LogLevel constants.
+     * @param bool $logFileOnly
+     *   Whether to only log to the file, not to the console.
      *
      * @return void
      */
-    public function log(string|array $message, string $logLevel): void
+    public function log(string|array $message, string $logLevel, bool $logFileOnly = false): void
     {
-        if (method_exists($this->io, $logLevel)) {
-            $this->io->{$logLevel}($message);
-        } else {
-            $this->io->writeln($message);
+        if (!$this->logStarted) {
+            $this->logStarted = true;
+            $this->log('Start log for ' . $this->getName(), LogLevel::INFO, true);
+        }
+        if (!$logFileOnly) {
+            if (method_exists($this->io, $logLevel)) {
+                $this->io->{$logLevel}($message);
+            } else {
+                $this->io->writeln($message);
+            }
         }
         $log_file_path = $this->logFilePath();
         if (is_writable($log_file_path)) {
