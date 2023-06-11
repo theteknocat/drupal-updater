@@ -260,18 +260,6 @@ class Site
     }
 
     /**
-     * Update the site.
-     *
-     * @return bool
-     *   TRUE if the site was updated successfully, FALSE otherwise.
-     */
-    public function update(): bool
-    {
-        $this->announce('Update');
-        return true;
-    }
-
-    /**
      * Rollback the site.
      *
      * @return bool

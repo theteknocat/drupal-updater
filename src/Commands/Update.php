@@ -87,9 +87,23 @@ class Update extends Command
     {
         if (!empty($this->sitesToProcess)) {
             foreach ($this->sitesToProcess as $site) {
-                $site->update();
+                $this->updateSite($site);
             }
         }
         return 0;
+    }
+
+    /**
+     * Update a single site.
+     *
+     * @param \TheTeknocat\DrupalUp\Commands\Models\Site $site
+     *   The site object.
+     *
+     * @return bool
+     *   Whether or not the site was updated successfully.
+     */
+    protected function updateSite(Site $site): bool
+    {
+        return true;
     }
 }
