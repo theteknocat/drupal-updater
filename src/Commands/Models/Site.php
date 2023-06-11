@@ -170,21 +170,21 @@ class Site
             $messages[] = '<fg=bright-blue>URIs:</>         ' . implode(', ', $this->uris);
             $messages[] = '<fg=bright-blue>Prod aliases:</> ' . implode(', ', $aliases);
         } else {
-            $messages[] = '<fg=bright-blue>URI:</>            ' . reset($this->uris);
-            $messages[] = '<fg=bright-blue>Prod alias:</>     ' . reset($aliases);
+            $messages[] = '<fg=bright-blue>URI:</>          ' . reset($this->uris);
+            $messages[] = '<fg=bright-blue>Prod alias:</>   ' . reset($aliases);
         }
         $this->command->io->text($messages);
         if (empty($this->siteAliases)) {
             $this->command->io->newLine();
             $this->command->warning('Database cannot be synchronized from production prior to updates.'
-            . ' However, the current database will still be backed up first.');
+            . ' The current database will still be backed up first.');
         } elseif (count($this->siteAliases) < count($this->uris)) {
             // Issue a warning about the missing aliases.
             $this->command->io->newLine();
             $this->command->warning('Database cannot be synchronized from production for the following URIs:');
             $this->command->io->newLine();
             $this->command->io->listing(array_diff($this->uris, array_keys($this->siteAliases)));
-            $this->command->io->text('However, the current database will still be backed up first.');
+            $this->command->io->text('The current database will still be backed up first.');
         }
         $this->command->io->newLine();
     }
