@@ -171,7 +171,7 @@ class Site
         if (empty($this->siteAliases)) {
             $aliases = ['None found'];
         } else {
-            $aliases = implode(', ', array_keys($this->siteAliases));
+            $aliases = array_keys($this->siteAliases);
         }
         if ($this->isMultisite) {
             $messages[] = '<fg=bright-blue>URIs:</>           ' . implode(', ', $this->uris);
