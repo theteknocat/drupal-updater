@@ -66,13 +66,6 @@ class Site
     protected $siteAliases = [];
 
     /**
-     * The site's prod alias names.
-     *
-     * @var array
-     */
-    protected $siteAliasNames = [];
-
-    /**
      * List of errors that occurred while processing the site.
      *
      * @var array
@@ -164,23 +157,36 @@ class Site
     {
         $this->command->io->section($actionName . ' Site: ' . reset($this->uris));
         $messages = [
-            '<fg=bright-blue>Site root:</>      ' . $this->path,
-            '<fg=bright-blue>Multisite:</>      ' . ($this->isMultisite ? 'yes' : 'no'),
-            '<fg=bright-blue>Drush path:</>     ' . $this->drushPath,
+            '<fg=bright-blue>Site root:</>    ' . $this->path,
+            '<fg=bright-blue>Multisite:</>    ' . ($this->isMultisite ? 'yes' : 'no'),
+            '<fg=bright-blue>Drush path:</>   ' . $this->drushPath,
         ];
         if (empty($this->siteAliases)) {
             $aliases = ['None found'];
         } else {
-            $aliases = array_keys($this->siteAliases);
+            $aliases = array_values($this->siteAliases);
         }
         if ($this->isMultisite) {
-            $messages[] = '<fg=bright-blue>URIs:</>           ' . implode(', ', $this->uris);
-            $messages[] = '<fg=bright-blue>Prod alias(es):</> ' . implode(', ', $aliases);
+            $messages[] = '<fg=bright-blue>URIs:</>         ' . implode(', ', $this->uris);
+            $messages[] = '<fg=bright-blue>Prod aliases:</> ' . implode(', ', $aliases);
         } else {
             $messages[] = '<fg=bright-blue>URI:</>            ' . reset($this->uris);
             $messages[] = '<fg=bright-blue>Prod alias:</>     ' . reset($aliases);
         }
         $this->command->io->text($messages);
+        if (empty($this->siteAliases)) {
+            $this->command->io->newLine();
+            $this->command->warning('Database cannot be synchronized from production prior to updates.'
+            . ' However, the current database will still be backed up first.');
+        } elseif (count($this->siteAliases) < count($this->uris)) {
+            // Issue a warning about the missing aliases.
+            $this->command->io->newLine();
+            $this->command->warning('Database cannot be synchronized from production for the following URIs:');
+            $this->command->io->newLine();
+            $this->command->io->listing(array_diff($this->uris, array_keys($this->siteAliases)));
+            $this->command->io->text('However, the current database will still be backed up first.');
+        }
+        $this->command->io->newLine();
     }
 
     /**
@@ -329,14 +335,14 @@ class Site
             if (empty($output)) {
                 return;
             }
-            $this->siteAliases = json_decode($output, true);
-            $this->command->debug('All site aliases: ' . print_r($this->siteAliases, true));
+            $aliases = json_decode($output, true);
+            $this->command->debug('All site aliases: ' . print_r($aliases, true));
             // Only keep the aliases whose key contains the prodAliasNameMatch
             // and whose uri value matches one of the site's uris.
-            $this->siteAliases = array_filter($this->siteAliases, function ($key) {
+            $aliases = array_filter($aliases, function ($key) {
                 return strpos($key, $this->prodAliasNameMatch) !== false;
             }, ARRAY_FILTER_USE_KEY);
-            $this->siteAliases = array_filter($this->siteAliases, function ($value) {
+            $aliases = array_filter($aliases, function ($value) {
                 // See if the value contains one of the uris:
                 $match = false;
                 foreach ($this->uris as $uri) {
@@ -347,9 +353,15 @@ class Site
                 }
                 return $match;
             });
+            // Now organize the aliases by uri.
+            foreach ($aliases as $alias => $aliasInfo) {
+                foreach ($this->uris as $uri) {
+                    if (strpos($aliasInfo['uri'], $uri) !== false) {
+                        $this->siteAliases[$uri] = $alias;
+                    }
+                }
+            }
             $this->command->debug('Filtered site aliases: ' . print_r($this->siteAliases, true));
-            // Store the alias names for convenience.
-            $this->siteAliasNames = array_keys($this->siteAliases);
         } else {
             // Put the error in the errors array.
             $this->errors[] = 'Failed to obtain site aliases: ' . $process->getErrorOutput();
