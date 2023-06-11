@@ -195,18 +195,6 @@ class Site
             $messages[] = '<fg=bright-blue>Prod alias:</>   ' . reset($aliases);
         }
         $this->command->io->text($messages);
-        if (empty($this->siteAliases)) {
-            $this->command->io->newLine();
-            $this->command->warning('Database cannot be synchronized from production prior to updates.'
-            . ' The current database will still be backed up first.');
-        } elseif (count($this->siteAliases) < count($this->uris)) {
-            // Issue a warning about the missing aliases.
-            $this->command->io->newLine();
-            $this->command->warning('Database cannot be synchronized from production for the following URIs:');
-            $this->command->io->newLine();
-            $this->command->io->listing(array_diff($this->uris, array_keys($this->siteAliases)));
-            $this->command->io->text('The current database will still be backed up first.');
-        }
         $this->command->io->newLine();
     }
 
@@ -480,6 +468,16 @@ class Site
      */
     public function syncProdDatabase(): void
     {
+        if (empty($this->siteAliases)) {
+            $this->command->warning('Database cannot be synchronized from production.');
+            $this->command->io->newLine();
+        } elseif (count($this->siteAliases) < count($this->uris)) {
+            // Issue a warning about the missing aliases.
+            $this->command->warning('Database cannot be synchronized from production for the following URIs:');
+            $this->command->io->newLine();
+            $this->command->io->listing(array_diff($this->uris, array_keys($this->siteAliases)));
+            $this->command->io->newLine();
+        }
         foreach ($this->siteAliases as $uri => $alias) {
             $errors = false;
             $this->command->info('Sync and sanitize production database from ' . $alias . ' for ' . $uri . '...');
