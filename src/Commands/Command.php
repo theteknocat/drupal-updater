@@ -480,9 +480,9 @@ abstract class Command extends BaseCommand implements CommandInterface
             }
         }
         if (!empty($this->siteList)) {
-            $this->loadSitesToProcess();
+            $this->validateSites();
             if (empty($this->sitesToProcess)) {
-                $this->log('Unable to load any sites to process. See messages above for details.', LogLevel::ERROR);
+                $this->log('Unable to load any sites to process.', LogLevel::ERROR);
             }
         } else {
             $this->log('No sites found to process.', LogLevel::ERROR);
@@ -494,20 +494,37 @@ abstract class Command extends BaseCommand implements CommandInterface
      *
      * @return void
      */
-    protected function loadSitesToProcess(): void
+    protected function validateSites(): void
     {
-        $this->io->section('Loading sites to process...');
+        $this->io->section('Validating ' . count($this->siteList) . ' sites to ' . $this->getName()
+            . '. This may take a few minutes...');
         // Using the siteList array, load the sites to process
         // into the sitesToProcess array as Site objects.
+        $sites_skipped = [];
+        $this->io->progressStart(count($this->siteList));
         foreach ($this->siteList as $site) {
             $site = new Site($site, $this);
             if ($site->hasErrors()) {
-                $messages = array_merge(['Skipping site: ' . implode(', ', $site->getUris())], $site->getErrors());
-                $this->log($messages, LogLevel::WARNING);
-                $this->io->newLine();
+                $sites_skipped[] = $site;
+                $messages = array_merge(
+                    ['Site skipped due to errors: ' . implode(', ', $site->getUris())],
+                    $site->getErrors()
+                );
+                $this->log($messages, LogLevel::WARNING, true);
             } else {
                 $this->sitesToProcess[] = $site;
             }
+            $this->io->progressAdvance();
+        }
+        $this->io->progressFinish();
+        $this->info(count($this->sitesToProcess) . ' sites successfully validated.');
+        if (!empty($sites_skipped)) {
+            $this->io->newLine();
+            $this->warning(
+                'The following sites will be skipped due to validation errors (see log file for details):',
+            );
+            $this->io->newLine();
+            $this->io->listing(array_map(fn ($site) => implode(', ', $site->getUris()), $sites_skipped));
         }
     }
 
