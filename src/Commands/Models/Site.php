@@ -324,7 +324,12 @@ class Site
         // Use Symfony process to run drush site:alias and capture the output.
         $process = $this->runDrushCommand('site:alias', ['--format=json']);
         if ($process->isSuccessful()) {
-            $this->siteAliases = json_decode($process->getOutput(), true);
+            $output = trim($process->getOutput());
+            $this->command->debug('Drush site:alias result: ' . $output);
+            if (empty($output)) {
+                return;
+            }
+            $this->siteAliases = json_decode($output, true);
             $this->command->debug('All site aliases: ' . print_r($this->siteAliases, true));
             // Only keep the aliases whose key contains the prodAliasNameMatch
             // and whose uri value matches one of the site's uris.
