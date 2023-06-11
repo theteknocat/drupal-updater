@@ -546,7 +546,7 @@ abstract class Command extends BaseCommand implements CommandInterface
      */
     protected function validateSites(): void
     {
-        $this->io->section('Validating ' . count($this->siteList) . ' sites to ' . $this->getName()
+        $this->io->section('Validating ' . count($this->siteList) . ' site(s) to ' . $this->getName()
             . '. This may take a few minutes...');
         // Using the siteList array, load the sites to process
         // into the sitesToProcess array as Site objects.
