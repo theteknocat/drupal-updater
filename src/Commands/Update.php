@@ -113,7 +113,7 @@ class Update extends Command
         $site->announce('Update');
 
         if (!$site->ensureCleanGitRepo($this->config['git']['main_branch'])) {
-            $this->log($site->getErrors(), LogLevel::ERROR);
+            $this->log($site->getErrors(), LogLevel::ERROR, true);
             $this->warning('Site ' . implode(', ', $site->getUris()) . ' is not on the '
                 . $this->config['git']['main_branch']
                 . ' branch and/or has uncommitted changes. Skipping.');
