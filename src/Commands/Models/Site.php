@@ -544,7 +544,7 @@ class Site
      */
     public function backupDatabase(): void
     {
-        foreach ($this->siteAliases as $uri => $alias) {
+        foreach ($this->uris as $uri) {
             $this->command->info('Backup database for ' . $uri . '...');
             $this->command->io->newLine();
             // Run the drush sql-dump command.
