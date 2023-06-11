@@ -106,6 +106,10 @@ class Update extends Command
      */
     protected function updateSite(Site $site): bool
     {
+        // Set whether or not to apply git changes based on dry-run mode.
+        $site->setApplyGitChanges(!$this->isDryRun);
+
+        // Announce the command.
         $site->announce('Update');
 
         if (!$site->ensureCleanGitRepo($this->config['git']['main_branch'])) {

@@ -87,6 +87,20 @@ class Site
     protected array $commandResults = [];
 
     /**
+     * Whether or not to apply git changes.
+     *
+     * True by default. Can be changed using setApplyGitChanges() method
+     * if the calling command needs to, for example when the update command
+     * has been called in dry-run mode.
+     *
+     * Note that this only applies to commits and pushes. Repository cleaning
+     * at the start of a command is always performed.
+     *
+     * @var bool
+     */
+    protected bool $applyGitChanges = true;
+
+    /**
      * Construct a site object and initialize its properties.
      *
      * @param array $siteInfo
@@ -264,6 +278,19 @@ class Site
     public function hasAliases(): bool
     {
         return !empty($this->siteAliases);
+    }
+
+    /**
+     * Set whether or not to apply git changes.
+     *
+     * @param bool $value
+     *   TRUE to apply git changes, FALSE otherwise.
+     *
+     * @return void
+     */
+    public function setApplyGitChanges(bool $value): void
+    {
+        $this->applyGitChanges = $value;
     }
 
     /**
