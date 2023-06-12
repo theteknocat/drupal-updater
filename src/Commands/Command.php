@@ -182,9 +182,10 @@ abstract class Command extends BaseCommand implements CommandInterface
         $result = $this->runCommand();
         if ($this->logStarted) {
             // If the log was started, add an end marker.
-            $this->log($this->getName(), 'END', true);
+            $this->log(ucwords($this->getName()), 'END', true);
             $this->io->newLine();
             $this->info('There are items in the log to review. Run `drupalup log` to see them.');
+            $this->io->newLine();
         }
         return $result;
     }
@@ -457,7 +458,7 @@ abstract class Command extends BaseCommand implements CommandInterface
         if (!$this->logStarted) {
             // If the log wasn't started yet, add a start marker.
             $this->logStarted = true;
-            $this->log($this->getName(), 'START', true);
+            $this->log(ucwords($this->getName()), 'START', true);
         }
         if (!$logFileOnly) {
             if (method_exists($this->io, $logLevel)) {
