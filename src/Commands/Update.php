@@ -6,6 +6,9 @@ use Psr\Log\LogLevel;
 use Symfony\Component\Console\Input\InputOption;
 use TheTeknocat\DrupalUp\Commands\Models\Site;
 
+/**
+ * Command to run Drupal updates.
+ */
 class Update extends Command
 {
     /**
