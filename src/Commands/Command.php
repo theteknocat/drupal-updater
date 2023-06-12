@@ -481,6 +481,27 @@ abstract class Command extends BaseCommand implements CommandInterface
     }
 
     /**
+     * Log errors for a site.
+     *
+     * @param Site $site
+     *   The site to log errors for.
+     *
+     * @return void
+     */
+    protected function logSiteErrors(Site $site): void
+    {
+        $errors = $site->getErrors();
+        if (!empty($errors)) {
+            $this->log(
+                'Errors performing ' . $this->getName(). ' on ' . implode(', ', $site->getUris()) . ':',
+                LogLevel::ERROR,
+                true
+            );
+            $this->log($errors, LogLevel::ERROR, true);
+        }
+    }
+
+    /**
      * Get the path to the log file.
      *
      * @return string
