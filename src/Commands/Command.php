@@ -622,7 +622,7 @@ abstract class Command extends BaseCommand implements CommandInterface
     public function debug(string|array $message): void
     {
         if ($this->isDebug) {
-            $this->debugOutput($message);
+            $this->log($message, LogLevel::DEBUG, true);
         }
     }
 }

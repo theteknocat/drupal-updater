@@ -57,17 +57,4 @@ trait MessagesTrait
     {
         $this->io->writeln('<bg=green;fg=black>[success]</> <fg=green;bg=default>' . $message . '</>');
     }
-
-    /**
-     * Output a debug message.
-     *
-     * @param string|array $message
-     *   The message to output.
-     *
-     * @return void
-     */
-    public function debugOutput(string|array $message): void
-    {
-        $this->io->block($message, 'DEBUG', 'bg=black;fg=yellow', ' ', true);
-    }
 }
