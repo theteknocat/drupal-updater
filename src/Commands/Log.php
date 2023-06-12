@@ -61,7 +61,7 @@ class Log extends Command
         $this->io->newLine();
         // Now loop through the log entries and display them in a table.
         $this->io->table(
-            ['Date', 'Time', 'Level', 'Message'],
+            ['Timestamp', 'Type', 'Message'],
             $this->log
         );
 
@@ -100,13 +100,15 @@ class Log extends Command
         $parsedLog = [];
         $logLevelColors = [
             LogLevel::EMERGENCY => 'red',
-            LogLevel::ALERT => 'red',
-            LogLevel::CRITICAL => 'red',
-            LogLevel::ERROR => 'red',
-            LogLevel::WARNING => 'yellow',
-            LogLevel::NOTICE => 'yellow',
-            LogLevel::INFO => 'green',
-            LogLevel::DEBUG => 'cyan',
+            LogLevel::ALERT     => 'red',
+            LogLevel::CRITICAL  => 'red',
+            LogLevel::ERROR     => 'red',
+            LogLevel::WARNING   => 'yellow',
+            LogLevel::NOTICE    => 'yellow',
+            LogLevel::INFO      => 'blue',
+            LogLevel::DEBUG     => 'cyan',
+            'start'             => 'green',
+            'end'               => 'green',
         ];
         foreach ($log as $entry) {
             $entry = trim($entry);
@@ -119,8 +121,7 @@ class Log extends Command
                 // We want to display the date and time separately.
                 // We can use the DateTime class to parse the timestamp.
                 $dateTime = new \DateTime($matches['timestamp']);
-                $date = $dateTime->format('M d, Y');
-                $time = $dateTime->format('H:i:s');
+                $date = $dateTime->format('Y M d H:i:s');
                 $message = json_decode($matches['message'], true) ?? $matches['message'];
                 if (!is_scalar($message)) {
                     // If the message is not a scalar value, then it is an array or object.
@@ -133,8 +134,7 @@ class Log extends Command
                     $levelText = '<fg=' . $levelColor . '>' . $levelText . '</>';
                 }
                 $parsedLog[] = [
-                    'date'  => $date,
-                    'time'  => $time,
+                    'datetime'  => $date,
                     'level' => $levelText,
                     // The message may be a string or a json object, so parse that accordingly.
                     'message' => $message,
@@ -149,10 +149,10 @@ class Log extends Command
         $lastStart = 0;
         $lastEnd = 0;
         foreach ($parsedLog as $key => $entry) {
-            if ($entry['level'] === 'START') {
+            if (strpos($entry['level'], 'START') !== false) {
                 $lastStart = $key;
             }
-            if ($entry['level'] === 'END') {
+            if (strpos($entry['level'], 'END') !== false) {
                 $lastEnd = $key;
             }
         }
