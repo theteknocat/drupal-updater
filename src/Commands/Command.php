@@ -129,12 +129,14 @@ abstract class Command extends BaseCommand implements CommandInterface
     protected function configure(): void
     {
         // Call the specific command's configure method.
-        $this->configureCommand()
+        $this->configureCommand();
+        if ($this->usesDefaultOptions()) {
             // Add default arguments and options.
-            ->addArgument(
+            $this->addArgument(
                 'uri',
                 InputArgument::OPTIONAL,
-                'The URI of a specific site to update. Must match a URI in the drupalup.sites.yml file.'
+                'The URI of a specific site to run the command against.'
+                    . ' Must match a URI in the drupalup.sites.yml file.'
             )
             ->addOption(
                 'debug',
@@ -142,6 +144,7 @@ abstract class Command extends BaseCommand implements CommandInterface
                 InputOption::VALUE_NONE,
                 'Output additional information for debugging during operation.'
             );
+        }
     }
 
     /**
@@ -165,9 +168,11 @@ abstract class Command extends BaseCommand implements CommandInterface
         }
         // Set the options from input for the specific command.
         $this->setOptions();
-        $is_debug = $this->input->getOption('debug');
-        if (!empty($is_debug)) {
-            $this->isDebug = true;
+        if ($this->input->hasOption('debug')) {
+            $is_debug = $this->input->getOption('debug');
+            if (!empty($is_debug)) {
+                $this->isDebug = true;
+            }
         }
         // Display the command announcement.
         $this->announce();
@@ -491,6 +496,10 @@ abstract class Command extends BaseCommand implements CommandInterface
      */
     protected function setSitesToUse(): void
     {
+        if (!$this->input->hasArgument('uri')) {
+            // If the command doesn't have a URI argument then we don't need to do anything.
+            return;
+        }
         $uri = $this->input->getArgument('uri');
         if (!empty($uri)) {
             // Find the URI in the siteList array and remove all others.

@@ -55,6 +55,14 @@ class Update extends Command
     /**
      * {@inheritdoc}
      */
+    public function usesDefaultOptions(): bool
+    {
+        return true;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function announce(): void
     {
         parent::announce();

@@ -21,6 +21,15 @@ interface CommandInterface
     public function configureCommand(): \TheTeknocat\DrupalUp\Commands\Command;
 
     /**
+     * Whether or not the command uses the default options.
+     *
+     * This includes the --debug option and uri argument.
+     *
+     * @return bool
+     */
+    public function usesDefaultOptions(): bool;
+
+    /**
      * Console announcement prior to running the command.
      *
      * @return void
