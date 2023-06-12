@@ -114,8 +114,6 @@ class Site
         if (!$this->validateSiteInfo($siteInfo)) {
             return;
         }
-        // Change to the site's directory.
-        chdir($this->path);
         $this->findDrush();
         if (!$this->hasDrush()) {
             return;
@@ -395,8 +393,7 @@ class Site
         $this->command->io->newLine();
         $this->command->io->progressStart(4);
         // First just make sure we actually have a git repo.
-        $process = new Process([$this->command->git(), 'status', '--short']);
-        $process->run();
+        $process = $this->runGitCommand('status', ['--short']);
         $this->command->io->progressAdvance();
         if (!$process->isSuccessful()) {
             $this->errors[] = 'The site does not have a git repository:';
@@ -421,8 +418,7 @@ class Site
         }
         $this->command->io->progressAdvance();
         // Now ensure the current branch is up-to-date.
-        $process = new Process([$this->command->git(), 'pull']);
-        $process->run();
+        $process = $this->runGitCommand('pull');
         if (!$process->isSuccessful()) {
             $this->errors[] = 'Failed to pull the latest changes from the git repository:';
             $this->errors[] = $process->getErrorOutput();
@@ -446,8 +442,7 @@ class Site
      */
     public function isOnAllowedBranch(string|array $allowedBranches): bool
     {
-        $process = new Process([$this->command->git(), 'branch', '--show-current']);
-        $process->run();
+        $process = $this->runGitCommand('branch', ['--show-current']);
         if (!$process->isSuccessful()) {
             $this->errors[] = 'Failed to determine the current git branch.';
             return false;
@@ -609,7 +604,7 @@ class Site
     /**
      * Run a drush command and return the process.
      *
-     * Note that the --root and --yes options are always added.
+     * Note that the --root and --yes options are automatically added.
      *
      * @param string $command
      *   The drush command to run.
@@ -635,6 +630,55 @@ class Site
             // Add the root and yes options.
             ['--root=' . $this->path, '--yes']
         );
+        return $this->runProcess($options, $timeout, $streamOutput);
+    }
+
+    /**
+     * Run a git command and return the process.
+     *
+     * @param string $command
+     *   The git command to run.
+     * @param array $options
+     *   An array of options to pass to the command.
+     * @param int $timeout
+     *   The timeout for the command.
+     * @param bool $streamOutput
+     *   Whether to stream the output to the console.
+     *
+     * @return \Symfony\Component\Process\Process
+     *   An instance of the Symfony Process object.
+     */
+    protected function runGitCommand(
+        string $command,
+        array $options = [],
+        int $timeout = 60,
+        bool $streamOutput = false
+    ): Process {
+        $options = array_merge(
+            // Start with the git executable and the command.
+            [$this->command->git(), $command],
+            // Add the options.
+            $options
+        );
+        return $this->runProcess($options, $timeout, $streamOutput);
+    }
+
+    /**
+     * Run a process and return the process object.
+     *
+     * @param array $options
+     *   An array of options to pass to the command.
+     * @param int $timeout
+     *   The timeout for the command.
+     * @param bool $streamOutput
+     *   Whether to stream the output to the console.
+     *
+     * @return \Symfony\Component\Process\Process
+     *   An instance of the Symfony Process object.
+     */
+    protected function runProcess(array $options, int $timeout = 60, bool $streamOutput = false): Process
+    {
+        chdir($this->path);
         $process = new Process($options);
         $process->setTimeout($timeout);
         if ($streamOutput) {
