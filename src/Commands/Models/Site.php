@@ -135,10 +135,8 @@ class Site
      */
     protected function validateSiteInfo($siteInfo): bool
     {
-        $this->command->debug([
-            'Validating site info.',
-            print_r($siteInfo, true),
-        ]);
+        $this->command->debug('Validating site info.');
+        $this->command->debug($siteInfo);
         if (!empty($siteInfo['uri'])) {
             if (is_array($siteInfo['uri'])) {
                 $this->uris = $siteInfo['uri'];
@@ -162,7 +160,6 @@ class Site
         } else {
             $this->errors[] = 'No prod alias name match provided.';
         }
-        $this->command->debug(array_merge(['Error messages:'], $this->errors));
         return (empty($this->errors));
     }
 
@@ -341,12 +338,12 @@ class Site
         $process = $this->runDrushCommand('site:alias', ['--format=json']);
         if ($process->isSuccessful()) {
             $output = trim($process->getOutput());
-            $this->command->debug('Drush site:alias result: ' . $output);
             if (empty($output)) {
                 return;
             }
             $aliases = json_decode($output, true);
-            $this->command->debug('All site aliases: ' . print_r($aliases, true));
+            $this->command->debug('All site aliases:');
+            $this->command->debug($aliases);
             // Only keep the aliases whose key contains the prodAliasNameMatch
             // and whose uri value matches one of the site's uris.
             $aliases = array_filter($aliases, function ($key) {
@@ -371,7 +368,8 @@ class Site
                     }
                 }
             }
-            $this->command->debug('Filtered site aliases: ' . print_r($this->siteAliases, true));
+            $this->command->debug('Filtered site aliases:');
+            $this->command->debug($this->siteAliases);
         } else {
             // Put the error in the errors array.
             $this->errors[] = 'Failed to obtain site aliases: ' . $process->getErrorOutput();

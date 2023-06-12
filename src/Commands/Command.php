@@ -591,11 +591,8 @@ abstract class Command extends BaseCommand implements CommandInterface
             $site = new Site($site, $this);
             if ($site->hasErrors()) {
                 $sites_skipped[] = $site;
-                $messages = array_merge(
-                    ['Site skipped due to errors: ' . implode(', ', $site->getUris())],
-                    $site->getErrors()
-                );
-                $this->log($messages, LogLevel::WARNING, true);
+                $this->log('Site skipped due to errors: ' . implode(', ', $site->getUris()), LogLevel::WARNING, true);
+                $this->log($site->getErrors(), LogLevel::ERROR, true);
             } else {
                 $this->sitesToProcess[] = $site;
             }
