@@ -179,7 +179,14 @@ abstract class Command extends BaseCommand implements CommandInterface
         // Set which sites to use for the command.
         $this->setSitesToUse();
         // Run the command.
-        return $this->runCommand();
+        $result = $this->runCommand();
+        if ($this->logStarted) {
+            // If the log was started, add an end marker.
+            $this->log($this->getName(), 'END', true);
+            $this->io->newLine();
+            $this->info('There are items in the log to review. Run `drupalup log` to see them.');
+        }
+        return $result;
     }
 
     /**
@@ -448,8 +455,9 @@ abstract class Command extends BaseCommand implements CommandInterface
     public function log(string|array $message, string $logLevel, bool $logFileOnly = false): void
     {
         if (!$this->logStarted) {
+            // If the log wasn't started yet, add a start marker.
             $this->logStarted = true;
-            $this->log('Start log for ' . $this->getName(), LogLevel::INFO, true);
+            $this->log($this->getName(), 'START', true);
         }
         if (!$logFileOnly) {
             if (method_exists($this->io, $logLevel)) {
@@ -478,7 +486,7 @@ abstract class Command extends BaseCommand implements CommandInterface
      * @return string
      *   The path to the log file.
      */
-    private function logFilePath(): string
+    protected function logFilePath(): string
     {
         if (!empty($this->config['log_file_path'])) {
             return str_replace('~', $_SERVER['HOME'], $this->config['log_file_path']);

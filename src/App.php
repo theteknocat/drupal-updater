@@ -17,6 +17,7 @@ class App extends BaseApplication
         parent::__construct(self::NAME, self::VERSION);
 
         $this->add(new Commands\Update());
+        $this->add(new Commands\Log());
 
         $this->setDefaultCommand('update');
     }
