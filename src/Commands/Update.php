@@ -58,7 +58,7 @@ class Update extends Command
     /**
      * {@inheritdoc}
      */
-    public function usesDefaultOptions(): bool
+    public function acceptsUriArgument(): bool
     {
         return true;
     }

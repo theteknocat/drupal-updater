@@ -130,21 +130,21 @@ abstract class Command extends BaseCommand implements CommandInterface
     {
         // Call the specific command's configure method.
         $this->configureCommand();
-        if ($this->usesDefaultOptions()) {
+        if ($this->acceptsUriArgument()) {
             // Add default arguments and options.
             $this->addArgument(
                 'uri',
                 InputArgument::OPTIONAL,
                 'The URI of a specific site to run the command against.'
                     . ' Must match a URI in the drupalup.sites.yml file.'
-            )
-            ->addOption(
-                'debug',
-                'D',
-                InputOption::VALUE_NONE,
-                'Output additional information for debugging during operation.'
             );
         }
+        $this->addOption(
+            'debug',
+            'D',
+            InputOption::VALUE_NONE,
+            'Output additional information for debugging during operation.'
+        );
     }
 
     /**
