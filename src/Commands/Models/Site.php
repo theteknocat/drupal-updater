@@ -384,10 +384,11 @@ class Site
      * @param string|array $allowedBranches
      *   The allowed git branches.
      *
-     * @return bool
-     *   TRUE if the codebase is clean, FALSE otherwise.
+     * @return void
+     *
+     * @throws \Exception
      */
-    public function ensureCleanGitRepo(string|array $allowedBranches): bool
+    public function ensureCleanGitRepo(string|array $allowedBranches): void
     {
         if (is_string($allowedBranches)) {
             $allowedBranches = [$allowedBranches];
@@ -403,7 +404,7 @@ class Site
             $this->errors[] = 'The site does not have a git repository:';
             $this->errors[] = $process->getErrorOutput();
             $this->command->io->progressFinish();
-            return false;
+            throw new \Exception('The site does not have a git repository.');
         }
         $output = $process->getOutput();
         if (!empty($output)) {
@@ -411,14 +412,14 @@ class Site
             $log_output = array_map('trim', explode("\n", trim($output)));
             $this->errors = array_merge($this->errors, $log_output);
             $this->command->io->progressFinish();
-            return false;
+            throw new \Exception('The site codebase contains uncommitted changes.');
         }
         $this->command->io->progressAdvance();
         if (!$this->isOnAllowedBranch($allowedBranches)) {
             $this->errors[] = 'The current working copy of the site is not on an allowed branch: '
                 . implode(', ', $allowedBranches);
             $this->command->io->progressFinish();
-            return false;
+            throw new \Exception('The current working copy of the site is not on an allowed branch.');
         }
         $this->command->io->progressAdvance();
         // Now ensure the current branch is up-to-date.
@@ -428,13 +429,12 @@ class Site
             $this->errors[] = 'Failed to pull the latest changes from the git repository:';
             $this->errors[] = $process->getErrorOutput();
             $this->command->io->progressFinish();
-            return false;
+            throw new \Exception('Failed to pull the latest changes from the git repository.');
         }
         $this->command->io->progressAdvance();
         $this->command->io->progressFinish();
         $this->command->success('Codebase is clean!');
         $this->command->io->newLine();
-        return true;
     }
 
     /**
@@ -466,11 +466,11 @@ class Site
      *
      * Will only sync the database if the site has a prod alias.
      *
-     * @return bool
-     *   TRUE if the database was synced successfully, FALSE otherwise.
+     * @throws \Exception
      */
     public function syncProdDatabase(): void
     {
+        $success = true;
         if (empty($this->siteAliases)) {
             $this->command->warning('Database cannot be synchronized from production.');
             $this->command->io->newLine();
@@ -523,28 +523,35 @@ class Site
                     $errors = true;
                     // Put the error in the errors array.
                     $this->errors[] = 'Failed to sanitize database from ' . $alias . ' '
-                    . $uri . ': ' . $process2->getErrorOutput();
+                        . $uri . ': ' . $process2->getErrorOutput();
                 }
                 $this->command->io->progressFinish();
                 if (!$errors) {
                     $this->command->success('Sanitization complete!');
                     $this->command->io->newLine();
+                } else {
+                    $success = false;
                 }
             } else {
                 // Put the error in the errors array.
                 $this->errors[] = 'Failed to sync database from ' . $alias . ' '
                     . $uri . ': ' . $process->getErrorOutput();
+                $success = false;
             }
+        }
+        if (!$success) {
+            throw new \Exception('Database synchronization failed.');
         }
     }
 
     /**
      * Backup the database for the site.
      *
-     * @return void
+     * @throws \Exception
      */
     public function backupDatabase(): void
     {
+        $success = true;
         foreach ($this->uris as $uri) {
             $this->command->info('Backup database for ' . $uri . '...');
             $this->command->io->newLine();
@@ -552,6 +559,7 @@ class Site
             $backup_directory = $this->backupDirectory($uri);
             if (!$backup_directory) {
                 $this->errors[] = 'Failed to establish backup directory for ' . $uri;
+                $success = false;
                 break;
             }
             $process = $this->runDrushCommand('sql-dump', [
@@ -568,7 +576,11 @@ class Site
                 // Put the error in the errors array.
                 $this->errors[] = 'Failed to backup database for ' . $uri . ': '
                     . $process->getErrorOutput();
+                $success = false;
             }
+        }
+        if (!$success) {
+            throw new \Exception('Database backup failed.');
         }
     }
 

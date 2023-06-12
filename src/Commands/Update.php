@@ -123,32 +123,18 @@ class Update extends Command
         // Announce the command.
         $site->announce('Update');
 
-        if (!$site->ensureCleanGitRepo($this->config['git']['main_branch'])) {
-            $this->log($site->getErrors(), LogLevel::ERROR, true);
-            $this->warning('Site ' . implode(', ', $site->getUris()) . ' is not on the '
-                . $this->config['git']['main_branch']
-                . ' branch and/or has uncommitted changes. Skipping.');
-            return false;
+        $success = true;
+        try {
+            $site->ensureCleanGitRepo($this->config['git']['main_branch']);
+            $site->syncProdDatabase();
+            $site->backupDatabase();
+        } catch (\Exception $e) {
+            $this->warning($e->getMessage());
+            $success = false;
         }
 
-        $site->syncProdDatabase();
+        $this->logSiteErrors($site);
 
-        if ($site->hasErrors()) {
-            $this->log($site->getErrors(), LogLevel::ERROR, true);
-            $this->warning('Errors occurred syncing database: ' . implode(', ', $site->getUris())
-                    . '. See the log file for details.');
-            return false;
-        }
-
-        $site->backupDatabase();
-
-        if ($site->hasErrors()) {
-            $this->log($site->getErrors(), LogLevel::ERROR, true);
-            $this->warning('Errors occurred backing up database: ' . implode(', ', $site->getUris())
-                    . '. See the log file for details.');
-            return false;
-        }
-
-        return true;
+        return $success;
     }
 }
