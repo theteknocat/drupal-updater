@@ -98,6 +98,16 @@ class Log extends Command
     {
         // Convert each log entry into an associative array.
         $parsedLog = [];
+        $logLevelColors = [
+            LogLevel::EMERGENCY => 'red',
+            LogLevel::ALERT => 'red',
+            LogLevel::CRITICAL => 'red',
+            LogLevel::ERROR => 'red',
+            LogLevel::WARNING => 'yellow',
+            LogLevel::NOTICE => 'yellow',
+            LogLevel::INFO => 'green',
+            LogLevel::DEBUG => 'cyan',
+        ];
         foreach ($log as $entry) {
             $entry = trim($entry);
             // Parse the entry using a regular expression based on the following format:
@@ -109,7 +119,7 @@ class Log extends Command
                 // We want to display the date and time separately.
                 // We can use the DateTime class to parse the timestamp.
                 $dateTime = new \DateTime($matches['timestamp']);
-                $date = $dateTime->format('F j, Y');
+                $date = $dateTime->format('M d, Y');
                 $time = $dateTime->format('H:i:s');
                 $message = json_decode($matches['message'], true) ?? $matches['message'];
                 if (!is_scalar($message)) {
@@ -117,10 +127,15 @@ class Log extends Command
                     // We want to display it as a json string.
                     $message = json_encode($message, JSON_PRETTY_PRINT);
                 }
+                $levelColor = $logLevelColors[strtolower($matches['level'])] ?? '';
+                $levelText = $matches['level'];
+                if (!empty($levelColor)) {
+                    $levelText = '<fg=' . $levelColor . '>' . $levelText . '</>';
+                }
                 $parsedLog[] = [
-                    'date' => $date,
-                    'time' => $time,
-                    'level' => $matches['level'],
+                    'date'  => $date,
+                    'time'  => $time,
+                    'level' => $levelText,
                     // The message may be a string or a json object, so parse that accordingly.
                     'message' => $message,
                 ];
