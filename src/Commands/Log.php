@@ -56,7 +56,7 @@ class Log extends Command
             $this->info('No log entries found.');
             return 0;
         }
-
+        $this->io->section('Log Entries for the most recent command:');
         $this->info('Timezone for displayed dates and times: ' . date_default_timezone_get());
         $this->io->newLine();
         // Now loop through the log entries and display them in a table.
