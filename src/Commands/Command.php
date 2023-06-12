@@ -8,7 +8,6 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Validator\Constraints\Email;
@@ -161,7 +160,7 @@ abstract class Command extends BaseCommand implements CommandInterface
     {
         $this->input = $input;
         $this->output = $output;
-        $this->io = new SymfonyStyle($this->input, $this->output);
+        $this->initIoStyle($input, $output);
         $this->loadConfiguration();
         if (!$this->validateConfiguration() || !$this->locateGit() || !$this->locateComposer()) {
             return 1;

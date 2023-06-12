@@ -2,7 +2,6 @@
 
 namespace TheTeknocat\DrupalUp\Commands;
 
-use Psr\Log\LogLevel;
 use Symfony\Component\Console\Input\InputOption;
 use TheTeknocat\DrupalUp\Commands\Models\Site;
 

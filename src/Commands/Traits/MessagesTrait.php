@@ -2,13 +2,14 @@
 
 namespace TheTeknocat\DrupalUp\Commands\Traits;
 
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Provide some message output methods.
  *
- * The parent class must have an $io property set to the
- * SymfonyStyle object.
+ * The parent class is responsible for setting the SymfonyStyle object.
  */
 trait MessagesTrait
 {
@@ -18,6 +19,19 @@ trait MessagesTrait
      * @var \Symfony\Component\Console\Style\SymfonyStyle
      */
     public SymfonyStyle $io;
+
+    /**
+     * Set the SymfonyStyle object.
+     *
+     * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+     *   The SymfonyStyle object.
+     *
+     * @return void
+     */
+    protected function initIoStyle(InputInterface $input, OutputInterface $output): void
+    {
+        $this->io = new SymfonyStyle($input, $output);
+    }
 
     /**
      * Output a warning message.
