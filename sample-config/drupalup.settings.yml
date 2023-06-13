@@ -31,6 +31,8 @@ mail:
   # REQUIRED: From name for sending emails.
   from_email_name: 'Johnny Appleseed'
 git:
+  # REQUIRED: The git repository remote key.
+  remote_key: 'origin'
   # REQUIRED: Git commit author. Must be in the proper format, or errors will occur
   # when committing resulting in the script failing.
   commit_author: 'Johnny Appleseed <johnny.appleseed@example.com>'

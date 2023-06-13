@@ -303,6 +303,10 @@ abstract class Command extends BaseCommand implements CommandInterface
         }
 
         // Validate the git config values.
+        if (empty($this->config['git']['remote_key'])) {
+            $this->log('No git remote key defined.', LogLevel::ERROR);
+            $valid_config = false;
+        }
         if (empty($this->config['git']['commit_author'])) {
             $this->log('No git commit author defined.', LogLevel::ERROR);
             $valid_config = false;
