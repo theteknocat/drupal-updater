@@ -5,12 +5,15 @@ namespace TheTeknocat\DrupalUp\Commands\Models;
 use Psr\Log\LogLevel;
 use Symfony\Component\Process\Process;
 use TheTeknocat\DrupalUp\Commands\Command;
+use TheTeknocat\DrupalUp\Commands\Traits\ExecutesExternalProcesses;
 
 /**
  * Model an individual site to run a given command against.
  */
 class Site
 {
+    use ExecutesExternalProcesses;
+
     /**
      * The URIs of the site.
      *
@@ -156,6 +159,22 @@ class Site
         }
         $this->getSiteAliases();
         $this->getSiteStatuses();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function applyGitChanges(): bool
+    {
+        return $this->applyGitChanges;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function getCommandObject(): Command
+    {
+        return $this->command;
     }
 
     /**
@@ -1062,164 +1081,5 @@ class Site
             $this->commandResults['messages'][] = $others_message;
         }
         return $result;
-    }
-
-    /**
-     * Run a drush command and return the process.
-     *
-     * Note that the --root and --yes options are automatically added.
-     *
-     * @param string $command
-     *   The drush command to run.
-     * @param array $options
-     *   An array of options to pass to the command.
-     * @param int $timeout
-     *   The timeout for the command.
-     *
-     * @return \Symfony\Component\Process\Process
-     *   An instance of the Symfony Process object.
-     */
-    protected function runDrushCommand(
-        string $command,
-        array $options = [],
-        int $timeout = 60,
-        bool $streamOutput = false
-    ): Process {
-        $options = array_merge(
-            // Start with the drush executable and the command.
-            [$this->drushPath, $command],
-            // Add the options.
-            $options,
-            // Add the root and yes options.
-            ['--root=' . $this->path, '--yes']
-        );
-        return $this->runProcess($options, $timeout, $streamOutput);
-    }
-
-    /**
-     * Run a composer command and return the process.
-     *
-     * @param string $command
-     *   The composer command to run.
-     * @param array $options
-     *   An array of options to pass to the command.
-     * @param int $timeout
-     *   The timeout for the command.
-     * @param bool $streamOutput
-     *   Whether to stream the output to the console.
-     *
-     * @return \Symfony\Component\Process\Process
-     *   An instance of the Symfony Process object.
-     */
-    protected function runComposerCommand(
-        string $command,
-        array $options = [],
-        int $timeout = 60,
-        bool $streamOutput = false
-    ): Process {
-        $options = array_merge(
-            // Start with the composer executable and the command.
-            [$this->command->composer(), $command],
-            // Add the options.
-            $options,
-            // Add the working directory option.
-            ['--working-dir=' . $this->path]
-        );
-        return $this->runProcess($options, $timeout, $streamOutput);
-    }
-
-    /**
-     * Run a git command and return the process.
-     *
-     * @param string $command
-     *   The git command to run.
-     * @param array $options
-     *   An array of options to pass to the command.
-     * @param int $timeout
-     *   The timeout for the command.
-     * @param bool $streamOutput
-     *   Whether to stream the output to the console.
-     *
-     * @return \Symfony\Component\Process\Process
-     *   An instance of the Symfony Process object.
-     */
-    protected function runGitCommand(
-        string $command,
-        array $options = [],
-        int $timeout = 60,
-        bool $streamOutput = false
-    ): Process {
-        $options = array_merge(
-            // Start with the git executable and the command.
-            [$this->command->git(), $command],
-            // Add the options.
-            $options
-        );
-        if (!$this->applyGitChanges && ($command == 'commit' || $command == 'push')) {
-            $options[] = '--dry-run';
-            $options[] = '-v';
-        }
-        $logOutput = !$this->applyGitChanges && (
-            $command == 'commit' || $command == 'push' ||
-            ($command == 'checkout' && in_array('-b', $options)) ||
-            ($command == 'branch' && in_array('-D', $options))
-        );
-        if ($logOutput) {
-            $display_options = array_slice($options, 2);
-            $this->command->log(
-                'Executing git ' . $command . ' ' . implode(' ', $display_options),
-                LogLevel::DEBUG,
-                true
-            );
-        }
-        return $this->runProcess($options, $timeout, $streamOutput, $logOutput);
-    }
-
-    /**
-     * Run a process and return the process object.
-     *
-     * @param array $options
-     *   An array of options to pass to the command.
-     * @param int $timeout
-     *   The timeout for the command.
-     * @param bool $streamOutput
-     *   Whether to stream the output to the console.
-     * @param bool $logOutput
-     *   Whether to log the output.
-     *
-     * @return \Symfony\Component\Process\Process
-     *   An instance of the Symfony Process object.
-     */
-    protected function runProcess(
-        array $options,
-        int $timeout = 60,
-        bool $streamOutput = false,
-        bool $logOutput = false
-    ): Process {
-        chdir($this->path);
-        $process = new Process($options);
-        $process->setTimeout($timeout);
-        if ($streamOutput || $logOutput) {
-            $process->run(function ($type, $buffer) use ($streamOutput, $logOutput) {
-                // Trim the buffer and break on newlines:
-                $buffer_lines = explode("\n", trim($buffer));
-                foreach ($buffer_lines as $line) {
-                    $line = trim($line);
-                    if ($logOutput) {
-                        if (!empty($line)) {
-                            $this->command->log(trim($line), LogLevel::DEBUG, true);
-                        }
-                    } elseif ($streamOutput) {
-                        $this->command->io->text('  <fg=blue>|</> ' . $line);
-                    }
-                }
-            });
-            if ($streamOutput) {
-                $this->command->io->newLine();
-            }
-        } else {
-            $process->run();
-        }
-        return $process;
     }
 }
