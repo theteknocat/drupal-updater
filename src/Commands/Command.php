@@ -15,14 +15,14 @@ use Symfony\Component\Validator\Validation;
 use Symfony\Component\Yaml\Yaml;
 use TheTeknocat\DrupalUp\Commands\Interfaces\CommandInterface;
 use TheTeknocat\DrupalUp\Commands\Models\Site;
-use TheTeknocat\DrupalUp\Commands\Traits\MessagesTrait;
+use TheTeknocat\DrupalUp\Commands\Traits\OutputsMessages;
 
 /**
  * The base command class with common functions.
  */
 abstract class Command extends BaseCommand implements CommandInterface
 {
-    use MessagesTrait;
+    use OutputsMessages;
 
     /**
      * The minimum composer version required.

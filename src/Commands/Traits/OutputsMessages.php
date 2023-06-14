@@ -11,7 +11,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  *
  * The parent class is responsible for setting the SymfonyStyle object.
  */
-trait MessagesTrait
+trait OutputsMessages
 {
     /**
      * The SymfonyStyle object.
