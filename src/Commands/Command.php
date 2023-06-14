@@ -232,6 +232,38 @@ abstract class Command extends BaseCommand implements CommandInterface
     }
 
     /**
+     * Return configuration or a given config value.
+     *
+     * @param string $key
+     *   The key to get from the configuration. Can be a dot separated string.
+     *
+     * @return mixed
+     *   The configuration value.
+     */
+    public function getConfig(string $key = ''): mixed
+    {
+        if (empty($key)) {
+            return $this->config;
+        }
+        // Allow the key to be a dot separated string.
+        $key_parts = explode('.', $key);
+        // Given each element of the key_parts array is a child of the previous,
+        // traverse the config array to get the value. For example, if the key
+        // is 'foo.bar.baz', the value of $config['foo']['bar']['baz'] will be
+        // returned.
+        $config = $this->config;
+        foreach ($key_parts as $key_part) {
+            if (isset($config[$key_part])) {
+                $config = $config[$key_part];
+            } else {
+                $config = null;
+                break;
+            }
+        }
+        return $config;
+    }
+
+    /**
      * Validate the configuration.
      *
      * @return bool
