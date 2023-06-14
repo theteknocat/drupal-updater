@@ -2,8 +2,6 @@
 
 namespace TheTeknocat\DrupalUp\Commands\Models;
 
-use Psr\Log\LogLevel;
-use Symfony\Component\Process\Process;
 use TheTeknocat\DrupalUp\Commands\Command;
 use TheTeknocat\DrupalUp\Commands\Traits\ExecutesExternalProcesses;
 
