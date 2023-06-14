@@ -141,6 +141,20 @@ class Site
     protected bool $composerUpdateDatabase = false;
 
     /**
+     * If a site cannot be rolled back, this is the reason why.
+     *
+     * @var string
+     */
+    public string $cannotRollbackReason = '';
+
+    /**
+     * Whether or not the site is a multisite that only has partial backups.
+     *
+     * @var bool
+     */
+    public bool $multisitePartialBackupsOnly = false;
+
+    /**
      * Construct a site object and initialize its properties.
      *
      * @param array $siteInfo
@@ -333,15 +347,143 @@ class Site
     }
 
     /**
-     * Rollback the site.
+     * Determine whether or not a rollback can be performed.
+     *
+     * Requires that there is a git repository, the site is on an allowed branch,
+     * and that there is a database backup file.
      *
      * @return bool
-     *   TRUE if the site was rolled back successfully, FALSE otherwise.
      */
-    public function rollback(): bool
+    public function canDoRollback(): bool
     {
-        $this->announce('Rollback');
+        $hasGitRepo = file_exists($this->path . '/.git/config');
+        if (!$hasGitRepo) {
+            $this->cannotRollbackReason = 'The site does not have a git repository.';
+            return false;
+        }
+        if (!$this->isOnAllowedBranch([
+            $this->command->getConfig('git.main_branch'),
+            $this->command->getConfig('git.update_branch'),
+            ])) {
+            $this->cannotRollbackReason = 'The site is not on one of the allowed branches ('
+                . $this->command->getConfig('git.main_branch') . ' or '
+                . $this->command->getConfig('git.update_branch') . ').';
+            return false;
+        }
+        $urisWithBackups = $this->urisWithBackups();
+        if (empty($urisWithBackups)) {
+            $this->cannotRollbackReason = 'The site does not have a database backup file.';
+            return false;
+        } elseif (count($urisWithBackups) < count($this->uris)) {
+            $this->cannotRollbackReason = 'There are only backup files for the following uris: '
+                . implode(', ', array_keys($urisWithBackups));
+            $this->multisitePartialBackupsOnly = true;
+        }
         return true;
+    }
+
+    /**
+     * Compile a list of uris that have DB backup files.
+     */
+    protected function urisWithBackups(): array
+    {
+        $urisWithBackups = [];
+        foreach ($this->uris as $uri) {
+            $urisWithBackups[$uri] = false;
+            $backup_directory = $this->backupDirectory($uri);
+            if (empty($backup_directory)) {
+                continue;
+            }
+            $db_backup_file = $backup_directory . '/db-backup.sql';
+            if (file_exists($db_backup_file)) {
+                $urisWithBackups[$uri] = true;
+            }
+        }
+        return $urisWithBackups;
+    }
+
+    /**
+     * Rollback the site.
+     *
+     * @return void
+     */
+    public function doRollback(): void
+    {
+        // First thing is to reset the git repository to HEAD.
+        $process = $this->runGitCommand('reset', ['--hard', 'HEAD']);
+        if (!$process->isSuccessful()) {
+            throw new \Exception('Unable to reset git repository to HEAD.');
+        }
+        // Ensure the repo is clean.
+        $process = $this->runGitCommand('clean', ['-f', '-d']);
+        if (!$process->isSuccessful()) {
+            throw new \Exception('Unable to clean git repository.');
+        }
+        // Next make sure we are on the main branch.
+        $process = $this->runGitCommand('checkout', [$this->command->getConfig('git.main_branch')]);
+        if (!$process->isSuccessful()) {
+            throw new \Exception('Unable to switch to the ' . $this->command->getConfig('git.main_branch')
+                . ' branch.');
+        }
+        $this->command->info('Git repository has been reset to HEAD and switched to the '
+            . $this->command->getConfig('git.main_branch') . ' branch.');
+        $this->command->io->newLine();
+        // Next import the database backup using drush sql:query.
+        $urisWithBackups = $this->urisWithBackups();
+        $steps = count($urisWithBackups);
+        $this->command->info('Importing database backup files. This may take a few minutes.');
+        $this->command->io->newLine();
+        $this->command->io->progressStart($steps);
+        foreach ($urisWithBackups as $uri => $hasBackup) {
+            $backup_directory = $this->backupDirectory($uri);
+            $db_backup_file = $backup_directory . '/db-backup.sql';
+            $process = $this->runDrushCommand('sql:query', [
+                '--file=' . $db_backup_file,
+                '--uri=' . $uri,
+            ], 180);
+            $this->command->io->progressAdvance();
+            if (!$process->isSuccessful()) {
+                $this->command->io->newLine(2);
+                throw new \Exception('Could not import database backup file for ' . $uri
+                    . '. ' . $process->getErrorOutput());
+            }
+        }
+        $this->command->io->progressFinish();
+        // Next we need to run composer install.
+        $this->command->info('Running composer install to rollback codebase. This may take a few minutes.');
+        $this->command->io->newLine();
+        // Delete the folders that are created by composer.
+        $firstStatus = reset($this->siteStatuses);
+        // All URIs will have the same root. We just need the docroot folder name.
+        $docroot = basename($firstStatus['root']);
+        $process = $this->runProcess([
+            'rm',
+            '-rf',
+            'vendor',
+            $docroot . '/core',
+            $docroot . '/modules/contrib',
+            $docroot . '/themes/contrib',
+        ]);
+        if (!$process->isSuccessful()) {
+            throw new \Exception('Could not delete vendor, core, modules/contrib, and themes/contrib folders.');
+        }
+        $this->readComposerFiles();
+        $process = $this->runComposerCommand('install', [
+            '--no-interaction',
+            '--quiet',
+        ], 300);
+        if (!$process->isSuccessful()) {
+            throw new \Exception('Could not run composer install. ' . $process->getErrorOutput());
+        }
+        if (!$this->composerRebuildCaches) {
+            $this->runDrushCommand('cr');
+        }
+        if (!$this->composerUpdateDatabase) {
+            $this->runDrushCommand('updb');
+            $this->runDrushCommand('cr');
+        }
+        // Reset the git repo again, to revert any scaffold files.
+        $this->runGitCommand('reset', ['--hard', 'HEAD']);
     }
 
     /**
@@ -454,7 +596,7 @@ class Site
         if (!$process->isSuccessful()) {
             $this->errors[] = 'The site does not have a git repository:';
             $this->errors[] = $process->getErrorOutput();
-            $this->command->io->progressFinish();
+            $this->command->io->newLine(2);
             throw new \Exception('The site does not have a git repository.');
         }
         $output = $process->getOutput();
@@ -462,14 +604,14 @@ class Site
             $this->errors[] = 'The site codebase contains uncommitted changes:';
             $log_output = array_map('trim', explode("\n", trim($output)));
             $this->errors = array_merge($this->errors, $log_output);
-            $this->command->io->progressFinish();
+            $this->command->io->newLine(2);
             throw new \Exception('The site codebase contains uncommitted changes.');
         }
         $this->command->io->progressAdvance();
         if (!$this->isOnAllowedBranch($allowedBranches)) {
             $this->errors[] = 'The current working copy of the site is not on an allowed branch: '
-                . implode(', ', $allowedBranches);
-            $this->command->io->progressFinish();
+            . implode(', ', $allowedBranches);
+            $this->command->io->newLine(2);
             throw new \Exception('The current working copy of the site is not on an allowed branch.');
         }
         $this->command->io->progressAdvance();
@@ -478,10 +620,9 @@ class Site
         if (!$process->isSuccessful()) {
             $this->errors[] = 'Failed to pull the latest changes from the git repository:';
             $this->errors[] = $process->getErrorOutput();
-            $this->command->io->progressFinish();
+            $this->command->io->newLine(2);
             throw new \Exception('Failed to pull the latest changes from the git repository.');
         }
-        $this->command->io->progressAdvance();
         $this->command->io->progressFinish();
         $this->command->success('Codebase is clean!');
         $this->command->io->newLine();

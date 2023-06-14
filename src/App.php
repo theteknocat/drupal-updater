@@ -18,6 +18,7 @@ class App extends BaseApplication
 
         $this->add(new Commands\Update());
         $this->add(new Commands\Log());
+        $this->add(new Commands\Rollback());
 
         $this->setDefaultCommand('update');
     }
