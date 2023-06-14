@@ -130,6 +130,8 @@ class Update extends Command
             $site->ensureCleanGitRepo($this->config['git']['main_branch']);
             $site->syncProdDatabase();
             $site->backupDatabase();
+            $site->setupCleanUpdateBranch();
+            $site->doComposerUpdate();
         } catch (\Exception $e) {
             $this->warning($e->getMessage());
             $success = false;
