@@ -661,7 +661,24 @@ class Site
             // Add the options.
             $options
         );
-        return $this->runProcess($options, $timeout, $streamOutput);
+        if (!$this->applyGitChanges && ($command == 'commit' || $command == 'push')) {
+            $options[] = '--dry-run';
+            $options[] = '-v';
+        }
+        $logOutput = !$this->applyGitChanges && (
+            $command == 'commit' || $command == 'push' ||
+            ($command == 'checkout' && in_array('-b', $options)) ||
+            ($command == 'branch' && in_array('-D', $options))
+        );
+        if ($logOutput) {
+            $display_options = array_slice($options, 2);
+            $this->command->log(
+                'Executing git ' . $command . ' ' . implode(' ', $display_options),
+                LogLevel::DEBUG,
+                true
+            );
+        }
+        return $this->runProcess($options, $timeout, $streamOutput, $logOutput);
     }
 
     /**
