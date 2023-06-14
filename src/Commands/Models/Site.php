@@ -7,6 +7,9 @@ use TheTeknocat\DrupalUp\Commands\Traits\ExecutesExternalProcesses;
 
 /**
  * Model an individual site to run a given command against.
+ *
+ * Also provides all the methods needed for running any command
+ * against the site.
  */
 class Site
 {
