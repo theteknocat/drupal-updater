@@ -65,6 +65,14 @@ class Update extends Command
     /**
      * {@inheritdoc}
      */
+    public function requiresUriArgument(): bool
+    {
+        return false;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function announce(): void
     {
         parent::announce();

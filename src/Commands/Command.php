@@ -132,6 +132,9 @@ abstract class Command extends BaseCommand implements CommandInterface
         if ($this->acceptsUriArgument()) {
             // Add default arguments and options.
             $this->addArgument(
+                // The uri argument is always optional, but if the specific
+                // command requires it (via requiresUriArgument()), then
+                // the user will be presented with a list to choose from.
                 'uri',
                 InputArgument::OPTIONAL,
                 'The URI of a specific site to run the command against.'
@@ -575,10 +578,10 @@ abstract class Command extends BaseCommand implements CommandInterface
                 }
             );
         } else {
-            // If the list option was specified, list all sites and request input.
-            // The input should collect the index of the site to update.
-            // If the command requested is "rollback" then this is required.
-            if ($this->getName() == 'rollback' || $this->input->getOption('list')) {
+            // If the list option was specified, or the command boths accepts
+            // and requires the uri argument, then list all sites and request
+            // input to choose one.
+            if ($this->input->getOption('list') || ($this->acceptsUriArgument() && $this->requiresUriArgument())) {
                 $this->io->section('Available sites:');
                 foreach ($this->siteList as $index => $site) {
                     $this->io->writeln('[<fg=yellow>' . $index . '</>]: ' . $site['uri']);

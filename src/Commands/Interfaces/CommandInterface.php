@@ -28,6 +28,18 @@ interface CommandInterface
     public function acceptsUriArgument(): bool;
 
     /**
+     * Whether or not the command requires the URI argument.
+     *
+     * Ignored if acceptsUriArgument() returns false. Otherwise,
+     * if this returns true and a uri was not provided via as
+     * an argument the command will ask the user to choose one
+     * from the list of sites in the druplaup.sites.yml file.
+     *
+     * @return bool
+     */
+    public function requiresUriArgument(): bool;
+
+    /**
      * Console announcement prior to running the command.
      *
      * @return void
