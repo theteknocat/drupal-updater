@@ -68,7 +68,7 @@ Options:
 * `<uri>` - Optional. Specify a single site to update. Must match a URI in the drupalup.sites.yml file.
 * `--list` - Optional. Only applies if `<uri>` is not supplied. Lists all available sites allowing the user to select one.
 * `--notify` - Optional. Send an email notification on completion.
-* `--dry-run` - perform a dry-run, meaning run all the updates, send a notification (if enabled), but do not perform any git actions.
+* `--dry-run` - perform a dry-run, meaning run all the updates, send a notification (if enabled), but perform any git commits or pushes in dry-run mode and log the results.
 
 ### Rollback Update
 
