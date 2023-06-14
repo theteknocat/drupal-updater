@@ -36,6 +36,7 @@ trait ExecutesExternalProcesses
         throw new \Exception('You must implement the getCommandObject() method in the class'
             . ' that is using the ExecutesExternalProcesses trait.');
     }
+
     /**
      * Run a drush command and return the process.
      *
