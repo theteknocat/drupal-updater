@@ -69,7 +69,10 @@ class Update extends Command
     {
         parent::announce();
         if ($this->isDryRun) {
-            $this->info('Dry-run mode - git changes <options=bold>will not be</> committed or pushed.');
+            $this->info('Local git changes <options=bold>will not be</> committed or pushed.');
+            $this->info('Commit and push commands will be run with --dry-run and -v options and the results logged.');
+            $this->warning('The log may show errors, like if a ' . $this->config['git']['update_branch']
+                . ' branch already exists in the remote repository. These errors can be ignored.');
         } else {
             $this->info('Git changes <options=bold>will be</> committed and pushed.');
         }
