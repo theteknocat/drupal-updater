@@ -137,6 +137,10 @@ class Update extends Command
             $success = false;
         }
 
+        if ($this->notify) {
+            // @todo compose and send notification email.
+        }
+
         $this->logSiteErrors($site);
 
         return $success;
