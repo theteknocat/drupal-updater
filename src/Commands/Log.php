@@ -38,6 +38,14 @@ class Log extends Command
     /**
      * {@inheritdoc}
      */
+    public function requiresUriArgument(): bool
+    {
+        return false;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function setOptions(): void
     {
         // No options to set.
