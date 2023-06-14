@@ -2,6 +2,7 @@
 
 namespace TheTeknocat\DrupalUp\Commands\Models;
 
+use Psr\Log\LogLevel;
 use Symfony\Component\Process\Process;
 use TheTeknocat\DrupalUp\Commands\Command;
 
@@ -672,24 +673,39 @@ class Site
      *   The timeout for the command.
      * @param bool $streamOutput
      *   Whether to stream the output to the console.
+     * @param bool $logOutput
+     *   Whether to log the output.
      *
      * @return \Symfony\Component\Process\Process
      *   An instance of the Symfony Process object.
      */
-    protected function runProcess(array $options, int $timeout = 60, bool $streamOutput = false): Process
-    {
+    protected function runProcess(
+        array $options,
+        int $timeout = 60,
+        bool $streamOutput = false,
+        bool $logOutput = false
+    ): Process {
         chdir($this->path);
         $process = new Process($options);
         $process->setTimeout($timeout);
-        if ($streamOutput) {
-            $process->run(function ($type, $buffer) {
+        if ($streamOutput || $logOutput) {
+            $process->run(function ($type, $buffer) use ($streamOutput, $logOutput) {
                 // Trim the buffer and break on newlines:
                 $buffer_lines = explode("\n", trim($buffer));
                 foreach ($buffer_lines as $line) {
-                    $this->command->io->text('  <fg=blue>|</> ' . trim($line));
+                    $line = trim($line);
+                    if ($logOutput) {
+                        if (!empty($line)) {
+                            $this->command->log(trim($line), LogLevel::DEBUG, true);
+                        }
+                    } elseif ($streamOutput) {
+                        $this->command->io->text('  <fg=blue>|</> ' . $line);
+                    }
                 }
             });
-            $this->command->io->newLine();
+            if ($streamOutput) {
+                $this->command->io->newLine();
+            }
         } else {
             $process->run();
         }
