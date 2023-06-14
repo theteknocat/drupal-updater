@@ -102,6 +102,41 @@ class Site
     protected bool $applyGitChanges = true;
 
     /**
+     * The contents of the site's composer.json file.
+     *
+     * @var object
+     */
+    protected object $composerFileContents;
+
+    /**
+     * The contents of the site's composer.lock file.
+     *
+     * @var object
+     */
+    protected object $composerLockContents;
+
+    /**
+     * The contents of the site's composer.json file after the update.
+     *
+     * @var object
+     */
+    protected object $composerLockAfterContents;
+
+    /**
+     * Whether or not the composer file runs the drush cr command.
+     *
+     * @var bool
+     */
+    protected bool $composerRebuildCaches = false;
+
+    /**
+     * Whether or not the composer file runs the drush updb command.
+     *
+     * @var bool
+     */
+    protected bool $composerUpdateDatabase = false;
+
+    /**
      * Construct a site object and initialize its properties.
      *
      * @param array $siteInfo
@@ -433,6 +468,57 @@ class Site
     }
 
     /**
+     * Setup a clean branch in which to do Drupal updates.
+     */
+    public function setupCleanUpdateBranch(): void
+    {
+        $update_branch = $this->command->getConfig('git.update_branch');
+        $remote_key = $this->command->getConfig('git.remote_key');
+
+        $this->command->info('Setup clean new branch for updates: ' . $update_branch);
+        $this->command->io->newLine();
+        // Delete the local branch, if present.
+        $process = $this->runGitCommand('branch', ['--list', $update_branch]);
+        if ($process->isSuccessful()) {
+            // Check the output to see if the branch is present.
+            $output = $process->getOutput();
+            if (strpos($output, $update_branch) !== false) {
+                // The branch is present, so delete it.
+                $process = $this->runGitCommand('branch', ['-D', $update_branch]);
+                if ($this->applyGitChanges && !$process->isSuccessful()) {
+                    throw new \Exception('Failed to delete local branch ' . $update_branch . ': '
+                        . $process->getErrorOutput());
+                }
+            }
+        }
+        // Delete the remote branch, if present.
+        $process = $this->runGitCommand('ls-remote', ['--heads', $remote_key, $update_branch]);
+        $output = $process->getOutput();
+        if (!empty($output)) {
+            $process = $this->runGitCommand('push', [$remote_key, '--delete', $update_branch]);
+            if ($this->applyGitChanges && !$process->isSuccessful()) {
+                throw new \Exception('Failed to delete local branch ' . $update_branch . ': '
+                    . $process->getErrorOutput());
+            }
+        }
+        // Checkout a fresh new drupal-updates branch and push it to the remote
+        // repository.
+        $process = $this->runGitCommand('checkout', ['-b', $update_branch]);
+        if ($this->applyGitChanges && !$process->isSuccessful()) {
+            throw new \Exception('Failed to create local branch ' . $update_branch . ': '
+                . $process->getErrorOutput());
+        }
+        $process = $this->runGitCommand('push', ['-u', $remote_key, $update_branch]);
+        if ($this->applyGitChanges && !$process->isSuccessful()) {
+            throw new \Exception('Failed to push local branch ' . $update_branch . ' to remote: '
+                . $process->getErrorOutput());
+        }
+        $this->command->io->newLine();
+        $this->command->success('Branch ' . $update_branch . ' is ready for updates!');
+        $this->command->io->newLine();
+    }
+
+    /**
      * Determine if the current git branch is allowed.
      *
      * @param string|array $allowedBranches
@@ -603,6 +689,382 @@ class Site
     }
 
     /**
+     * Run a composer update on the site.
+     *
+     * @return void
+     *
+     * @throws \Exception
+     */
+    public function doComposerUpdate(): void
+    {
+        $this->command->info('Running composer updates. This will take a few minutes.');
+        $this->command->io->newLine();
+        $this->readComposerFiles();
+
+        // We run the composer updates twice as occassionally the first run
+        // will not update all packages properly, or changes to packages may
+        // result in some being removed inadvertently.
+        $this->runComposerUpdates();
+        $this->runComposerUpdates();
+
+        $this->command->success('Composer update task completed.');
+        $this->command->io->newLine();
+
+        $result = $this->checkComposerChanges();
+
+        if (empty($result['new_packages']) && empty($result['updated_packages'])) {
+            // Nothing was updated.
+            $this->command->info('No composer changes were detected.');
+            $this->command->io->newLine();
+            // Reset the git repo, if we are applying git changes.
+            $this->runGitCommand('reset', [
+                '--hard',
+                'HEAD',
+            ]);
+            $this->runGitCommand('checkout', [
+                'master',
+            ]);
+            $this->command->info('Git repository reset to master.');
+            $this->command->io->newLine();
+
+            // Set status messages.
+            $this->commandResults['core_status'] = 'unchanged';
+            $this->commandResults['other_status'] = 'unchanged';
+            $this->commandResults['status'] = 'unchanged';
+            return;
+        }
+
+        $steps = 0;
+        if (!$this->composerRebuildCaches) {
+            $steps++;
+        }
+        if (!$this->composerUpdateDatabase) {
+            $steps++;
+        }
+        $post_update_revert_files = $this->command->getConfig('post_update_revert_files');
+        if (null !== $post_update_revert_files) {
+            $steps += count($post_update_revert_files);
+        }
+        if ($steps > 0) {
+            $this->command->info('Running additional tasks to complete the update. This may take a few minutes.');
+            $this->command->io->newLine();
+            $this->command->io->progressStart($steps);
+        }
+        if (!$this->composerRebuildCaches) {
+            $this->runDrushCommand('cr');
+            $this->command->io->progressAdvance();
+        }
+        if (!$this->composerUpdateDatabase) {
+            $this->runDrushCommand('updb');
+            $this->runDrushCommand('cr');
+            $this->command->io->progressAdvance();
+        }
+        if (null !== $post_update_revert_files) {
+            foreach ($post_update_revert_files as $file) {
+                $this->runDiffAndRevert($post_update_revert_files);
+                $this->command->io->progressAdvance();
+            }
+        }
+        if ($steps > 0) {
+            $this->command->io->progressFinish();
+        }
+
+        $update_result = $this->compilePackageUpdateInfo($result['updated_packages'] ?? [], 'updated');
+        $other_updates = ($update_result['module']
+            || $update_result['theme']
+            || $update_result['library']
+            || $update_result['profile']
+            || $update_result['other']);
+        $this->compilePackageUpdateInfo($result['new_packages'] ?? [], 'new');
+
+        // Now set status messages.
+        $this->commandResults['core_status'] = $update_result['core'] ? 'success' : 'unchanged';
+        $this->commandResults['other_status'] = $other_updates ? 'success' : 'unchanged';
+        $this->commandResults['status'] = ($update_result['core'] == $other_updates) ? 'success' : 'mixed';
+    }
+
+    /**
+     * Run a diff and revert on a file.
+     *
+     * @param array $files
+     *   The files to revert.
+     *
+     * @return void
+     */
+    protected function runDiffAndRevert(array $files): void
+    {
+        foreach ($files as $file) {
+            // Replace the [docroot] token (if found) in the filename
+            // with the actual docroot folder name.
+            $file = str_replace('[docroot]', basename($this->siteStatuses[$this->uris[0]]['root']), $file);
+            // Now run a git diff on the file.
+            $process = $this->runGitCommand('diff', [$file]);
+            if (!$process->isSuccessful()) {
+                $this->errors[] = 'Git diff failed: ' . $process->getErrorOutput();
+                continue;
+            }
+            $diff = $process->getOutput();
+            if (empty($diff)) {
+                // No diff, so nothing to revert.
+                continue;
+            }
+            $this->commandResults['messages'][] = "The " . $file
+                . " file was modified by the update process but was reverted before committing. "
+                . "Git diff follows for reference.\r\n";
+            $this->commandResults['messages'][] = "```\r\n"
+                . $diff . "\r\n```\r\n";
+            // Now revert the file.
+            $process = $this->runGitCommand('checkout', [$file]);
+        }
+    }
+
+    /**
+     * Execute the composer update command and handle errors.
+     *
+     * @return void
+     *
+     * @throws \Exception
+     */
+    protected function runComposerUpdates(): void
+    {
+        $process = $this->runComposerCommand('update', [
+            '--no-interaction',
+            '--quiet',
+        ], 300);
+        if (!$process->isSuccessful()) {
+            $this->commandResults['core_status'] = 'failed';
+            $this->commandResults['other_status'] = 'failed';
+            $this->commandResults['status'] = 'failed';
+
+            $this->commandResults['messages'][] = 'Composer update failed. Any error output from composer follows.';
+            $this->commandResults['messages'][] = $process->getErrorOutput();
+
+            // Put the error in the errors array.
+            $this->errors[] = 'Composer update failed: ' . $process->getErrorOutput();
+            throw new \Exception('Composer update failed.');
+        }
+    }
+
+    /**
+     * Read the composer files for the site.
+     *
+     * @return void
+     */
+    protected function readComposerFiles(): void
+    {
+        $composerFile = file_get_contents($this->path . '/composer.json');
+        $composerLock = file_get_contents($this->path . '/composer.lock');
+        if (!$composerFile || !$composerLock) {
+            $this->errors[] = 'Could not read composer files.';
+            throw new \Exception('Could not read composer files.');
+        }
+        $this->composerFileContents = json_decode($composerFile);
+        $this->composerLockContents = json_decode($composerLock);
+        // Check to see if $this->composerFileContents has post-install-cmd or
+        // post-update-cmd scripts that contain drush cr and/or drush updb.
+        // If it does, then we don't need to run those commands separately.
+        if (!empty($this->composerFileContents->scripts)) {
+            foreach ($this->composerFileContents->scripts as $script_type => $script) {
+                if ($script_type == 'post-install-cmd' || $script_type == 'post-update-cmd') {
+                    if (str_contains($script, 'drush cr')) {
+                        $this->composerRebuildCaches = true;
+                    }
+                    if (str_contains($script, 'drush updb')) {
+                        $this->composerUpdateDatabase = true;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Check for changes in the composer.lock file.
+     *
+     * @return array
+     *   An array of changes, grouped into new_packages and updated_packages.
+     */
+    protected function checkComposerChanges(): array
+    {
+        $composerLock = file_get_contents($this->path . '/composer.lock');
+        $this->composerLockAfterContents = json_decode($composerLock);
+        $result = [
+            'new_packages' => [],
+            'updated_packages' => [],
+        ];
+        $packages_before = [];
+        $packages_after = [];
+        foreach ($this->composerLockContents->packages as $package_info) {
+            $packages_before[$package_info->name] = [
+                'name' => $package_info->name,
+                'type' => $package_info->type,
+                'version' => $package_info->version,
+            ];
+        }
+        foreach ($this->composerLockAfterContents->packages as $package_info) {
+            $packages_after[$package_info->name] = [
+                'name' => $package_info->name,
+                'type' => $package_info->type,
+                'version' => $package_info->version,
+            ];
+        }
+        $package_names_before = array_keys($packages_before);
+        $package_names_after = array_keys($packages_after);
+        $new_packages = array_diff($package_names_after, $package_names_before);
+        if (!empty($new_packages)) {
+            foreach ($new_packages as $new_package_name) {
+                $result['new_packages'][$new_package_name] = $packages_after[$new_package_name];
+            }
+        }
+
+        // Now find updated packages:
+        foreach ($packages_after as $package_name => $package_info) {
+            if (!in_array($package_name, $new_packages)) {
+                // If not a new package, check to see if it has
+                // been updated.
+                if (!empty($packages_before[$package_name])
+                    && $packages_before[$package_name]['version'] != $package_info['version']) {
+                    $updated_package_info = $package_info;
+                    $updated_package_info['old_version'] = $packages_before[$package_name]['version'];
+                    $result['updated_packages'][$package_name] = $updated_package_info;
+                }
+            }
+        }
+        ksort($result['new_packages']);
+        ksort($result['updated_packages']);
+        return $result;
+    }
+
+    /**
+     * Compile new/update info for a set of packages.
+     *
+     * @param array $packages
+     *   The packages array.
+     * @param string $install_type
+     *   The type of install ('new' or 'updated').
+     *
+     * @return array
+     *   The installation success info.
+     */
+    protected function compilePackageUpdateInfo(array $packages, string $install_type): array
+    {
+        $result = [
+            'core'    => false,
+            'module'  => false,
+            'theme'   => false,
+            'library' => false,
+            'profile' => false,
+            'other'   => false,
+        ];
+        if (empty($packages)) {
+            return array_filter($result);
+        }
+        $core_message = "";
+        $modules_message = "";
+        $themes_message = "";
+        $libraries_message = "";
+        $profiles_message = "";
+        $others_message = "";
+        $module_package_types = [
+            'drupal-module',
+            'drupal-custom-module',
+        ];
+        $theme_package_types = [
+            'drupal-theme',
+            'drupal-custom-theme',
+        ];
+        $library_package_types = [
+            'drupal-library',
+            'drupal-custom-library',
+        ];
+        $profile_package_types = [
+            'drupal-profile',
+            'drupal-custom-profile',
+        ];
+        foreach ($packages as $package) {
+            if ($package['type'] == 'drupal-core' && empty($core_message)) {
+                // This item is unique and will always be updated, never new.
+                $result['core'] = true;
+                $core_message = "**Drupal Core was updated from " . $package['old_version']
+                    . " to " . $package['version'] . "**\r\n";
+            } elseif (in_array($package['type'], $module_package_types)) {
+                if (empty($modules_message)) {
+                    $result['module'] = true;
+                    $modules_message = "**The following " . $install_type . " Drupal modules were installed:**\r\n\r\n";
+                }
+                $modules_message .= "* `" . $package['name'] . "` (";
+                if (isset($package['old_version'])) {
+                    $modules_message .= $package['old_version'] . " => ";
+                }
+                $modules_message .= $package['version'] . ")\r\n";
+            } elseif (in_array($package['type'], $theme_package_types)) {
+                if (empty($themes_message)) {
+                    $result['theme'] = true;
+                    $themes_message = "**The following " . $install_type
+                        . " Drupal themes were installed:**\r\n\r\n";
+                }
+                $themes_message .= "* `" . $package['name'] . "` (";
+                if (isset($package['old_version'])) {
+                    $themes_message .= $package['old_version'] . " => ";
+                }
+                $themes_message .= $package['version'] . ")\r\n";
+            } elseif (in_array($package['type'], $library_package_types)) {
+                if (empty($libraries_message)) {
+                    $result['library'] = true;
+                    $libraries_message = "**The following " . $install_type
+                        . " Drupal libraries were installed:**\r\n\r\n";
+                }
+                $libraries_message .= "* `" . $package['name'] . "` (";
+                if (isset($package['old_version'])) {
+                    $libraries_message .= $package['old_version'] . " => ";
+                }
+                $libraries_message .= $package['version'] . ")\r\n";
+            } elseif (in_array($package['type'], $profile_package_types)) {
+                if (empty($profiles_message)) {
+                    $result['profile'] = true;
+                    $profiles_message = "**The following " . $install_type
+                        . " Drupal profiles were installed:**\r\n\r\n";
+                }
+                $profiles_message .= "* `" . $package['name'] . "` (";
+                if (isset($package['old_version'])) {
+                    $profiles_message .= $package['old_version'] . " => ";
+                }
+                $profiles_message .= $package['version'] . ")\r\n";
+            } else {
+                if (empty($others_message)) {
+                    $result['other'] = true;
+                    $others_message = "**The following additional " . $install_type
+                        . " packages (vendor libraries or "
+                        . "other dependencies) were installed:**\r\n\r\n";
+                }
+                $others_message .= "* `" . $package['name'] . "` (";
+                if (isset($package['old_version'])) {
+                    $others_message .= $package['old_version'] . " => ";
+                }
+                $others_message .= $package['version'] . ")\r\n";
+            }
+        }
+        if (!empty($core_message)) {
+            $this->commandResults['messages'][] = $core_message;
+        }
+        if (!empty($modules_message)) {
+            $this->commandResults['messages'][] = $modules_message;
+        }
+        if (!empty($themes_message)) {
+            $this->commandResults['messages'][] = $themes_message;
+        }
+        if (!empty($libraries_message)) {
+            $this->commandResults['messages'][] = $libraries_message;
+        }
+        if (!empty($profiles_message)) {
+            $this->commandResults['messages'][] = $profiles_message;
+        }
+        if (!empty($others_message)) {
+            $this->commandResults['messages'][] = $others_message;
+        }
+        return $result;
+    }
+
+    /**
      * Run a drush command and return the process.
      *
      * Note that the --root and --yes options are automatically added.
@@ -630,6 +1092,38 @@ class Site
             $options,
             // Add the root and yes options.
             ['--root=' . $this->path, '--yes']
+        );
+        return $this->runProcess($options, $timeout, $streamOutput);
+    }
+
+    /**
+     * Run a composer command and return the process.
+     *
+     * @param string $command
+     *   The composer command to run.
+     * @param array $options
+     *   An array of options to pass to the command.
+     * @param int $timeout
+     *   The timeout for the command.
+     * @param bool $streamOutput
+     *   Whether to stream the output to the console.
+     *
+     * @return \Symfony\Component\Process\Process
+     *   An instance of the Symfony Process object.
+     */
+    protected function runComposerCommand(
+        string $command,
+        array $options = [],
+        int $timeout = 60,
+        bool $streamOutput = false
+    ): Process {
+        $options = array_merge(
+            // Start with the composer executable and the command.
+            [$this->command->composer(), $command],
+            // Add the options.
+            $options,
+            // Add the working directory option.
+            ['--working-dir=' . $this->path]
         );
         return $this->runProcess($options, $timeout, $streamOutput);
     }
