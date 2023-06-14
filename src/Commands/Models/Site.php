@@ -504,7 +504,7 @@ class Site
                     ]);
                     if ($process3->isSuccessful()) {
                         $this->command->io->progressAdvance();
-                        $this->commandResults[$uri]['messages'][] = 'Database synced and sanitized from '
+                        $this->commandResults['messages'][] = 'Database synced and sanitized from '
                             . $alias . ' for ' . $uri;
                     } else {
                         $errors = true;
@@ -560,8 +560,8 @@ class Site
                 '--uri=' . $uri,
             ]);
             if ($process->isSuccessful()) {
-                $this->commandResults[$uri]['messages'][] = 'Database backed up to '
-                    . $backup_directory . '/' . $uri . '.sql';
+                $this->commandResults['messages'][] = 'Database backed up to '
+                    . $backup_directory . '/db-backup.sql';
                 $this->command->success('Database backed up to:');
                 $this->command->io->text($backup_directory . '/db-backup.sql');
                 $this->command->io->newLine();
