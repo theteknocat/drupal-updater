@@ -603,7 +603,7 @@ class Site
         $output = $process->getOutput();
         if (!empty($output)) {
             $this->errors[] = 'The site codebase contains uncommitted changes:';
-            $log_output = array_map('trim', explode("\n", trim($output)));
+            $log_output = array_map('trim', explode(PHP_EOL, trim($output)));
             $this->errors = array_merge($this->errors, $log_output);
             $this->command->io->newLine(2);
             throw new \Exception('The site codebase contains uncommitted changes.');

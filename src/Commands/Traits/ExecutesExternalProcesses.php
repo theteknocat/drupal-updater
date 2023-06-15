@@ -183,7 +183,7 @@ trait ExecutesExternalProcesses
             $logLines = [];
             $process->run(function ($type, $buffer) use ($streamOutput, $logOutput, &$logLines) {
                 // Trim the buffer and break on newlines:
-                $buffer_lines = explode("\n", trim($buffer));
+                $buffer_lines = explode(PHP_EOL, trim($buffer));
                 foreach ($buffer_lines as $line) {
                     $line = rtrim($line);
                     if ($streamOutput) {
