@@ -142,6 +142,7 @@ class Update extends Command
             $site->doComposerUpdate();
         } catch (\Exception $e) {
             $this->warning($e->getMessage());
+            $site->setError($e->getMessage());
             $success = false;
         }
 
