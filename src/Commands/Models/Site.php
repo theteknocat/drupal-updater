@@ -867,6 +867,9 @@ class Site
         // will not update all packages properly, or changes to packages may
         // result in some being removed inadvertently.
         $this->runComposerUpdates();
+        if ($this->commandResults['status'] == 'failed') {
+            return;
+        }
         $this->runComposerUpdates();
 
         $this->command->success('Composer update task completed.');
