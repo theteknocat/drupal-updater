@@ -213,20 +213,20 @@ class Site
                 $this->uris = [$siteInfo['uri']];
             }
         } else {
-            $this->errors[] = 'No URI(s) provided.';
+            $this->setError('No URI(s) provided.');
         }
         if (!empty($siteInfo['path'])) {
             $this->path = $siteInfo['path'];
             if (!file_exists($this->path) || !is_dir($this->path)) {
-                $this->errors[] = 'The path provided is not a directory that exists.';
+                $this->setError('The path provided is not a directory that exists.');
             }
         } else {
-            $this->errors[] = 'No path provided.';
+            $this->setError('No path provided.');
         }
         if (!empty($siteInfo['prod_alias_name_match'])) {
             $this->prodAliasNameMatch = $siteInfo['prod_alias_name_match'];
         } else {
-            $this->errors[] = 'No prod alias name match provided.';
+            $this->setError('No prod alias name match provided.');
         }
         return (empty($this->errors));
     }
@@ -294,6 +294,19 @@ class Site
     public function getErrors(): array
     {
         return $this->errors;
+    }
+
+    /**
+     * Add an error to the site.
+     *
+     * @param string $error
+     *   The error to add.
+     *
+     * @return void
+     */
+    public function setError(string $error): void
+    {
+        $this->errors[] = $error;
     }
 
     /**
@@ -499,7 +512,7 @@ class Site
         if (@file_exists($drush) && @is_executable($drush)) {
             $this->drushPath = $drush;
         } else {
-            $this->errors[] = 'Drush executable not found in ' . $drush;
+            $this->setError('Drush executable not found in ' . $drush);
         }
     }
 
@@ -519,7 +532,7 @@ class Site
                 $this->siteStatuses[$uri] = json_decode($process->getOutput(), true);
             } else {
                 // Put the error in the errors array.
-                $this->errors[] = 'Failed to obtain status for ' . $uri . ': ' . $process->getErrorOutput();
+                $this->setError('Failed to obtain status for ' . $uri . ': ' . $process->getErrorOutput());
             }
         }
     }
@@ -569,7 +582,7 @@ class Site
             $this->command->debug($this->siteAliases);
         } else {
             // Put the error in the errors array.
-            $this->errors[] = 'Failed to obtain site aliases: ' . $process->getErrorOutput();
+            $this->setError('Failed to obtain site aliases: ' . $process->getErrorOutput());
         }
     }
 
@@ -595,23 +608,25 @@ class Site
         $process = $this->runGitCommand('status', ['--short']);
         $this->command->io->progressAdvance();
         if (!$process->isSuccessful()) {
-            $this->errors[] = 'The site does not have a git repository:';
-            $this->errors[] = $process->getErrorOutput();
+            $this->setError('The site does not have a git repository:');
+            $this->setError($process->getErrorOutput());
             $this->command->io->newLine(2);
             throw new \Exception('The site does not have a git repository.');
         }
         $output = $process->getOutput();
         if (!empty($output)) {
-            $this->errors[] = 'The site codebase contains uncommitted changes:';
+            $this->setError('The site codebase contains uncommitted changes:');
             $log_output = array_map('trim', explode(PHP_EOL, trim($output)));
-            $this->errors = array_merge($this->errors, $log_output);
+            foreach ($log_output as $line) {
+                $this->setError($line);
+            }
             $this->command->io->newLine(2);
             throw new \Exception('The site codebase contains uncommitted changes.');
         }
         $this->command->io->progressAdvance();
         if (!$this->isOnAllowedBranch($allowedBranches)) {
-            $this->errors[] = 'The current working copy of the site is not on an allowed branch: '
-            . implode(', ', $allowedBranches);
+            $this->setError('The current working copy of the site is not on an allowed branch: '
+                . implode(', ', $allowedBranches));
             $this->command->io->newLine(2);
             throw new \Exception('The current working copy of the site is not on an allowed branch.');
         }
@@ -619,8 +634,8 @@ class Site
         // Now ensure the current branch is up-to-date.
         $process = $this->runGitCommand('pull');
         if (!$process->isSuccessful()) {
-            $this->errors[] = 'Failed to pull the latest changes from the git repository:';
-            $this->errors[] = $process->getErrorOutput();
+            $this->setError('Failed to pull the latest changes from the git repository:');
+            $this->setError($process->getErrorOutput());
             $this->command->io->newLine(2);
             throw new \Exception('Failed to pull the latest changes from the git repository.');
         }
@@ -692,7 +707,7 @@ class Site
     {
         $process = $this->runGitCommand('branch', ['--show-current']);
         if (!$process->isSuccessful()) {
-            $this->errors[] = 'Failed to determine the current git branch.';
+            $this->setError('Failed to determine the current git branch.');
             return false;
         }
         $currentBranch = trim($process->getOutput());
@@ -747,8 +762,8 @@ class Site
                     if (!$process2->isSuccessful()) {
                         $errors = true;
                         // Put the error in the errors array.
-                        $this->errors[] = 'Failed to sanitize database from ' . $alias . ' for '
-                            . $uri . ': ' . $process2->getErrorOutput();
+                        $this->setError('Failed to sanitize database from ' . $alias . ' for '
+                            . $uri . ': ' . $process2->getErrorOutput());
                     }
                 }
                 if (!$errors) {
@@ -763,19 +778,15 @@ class Site
                     ]);
                     if ($process3->isSuccessful()) {
                         $this->command->io->progressAdvance();
-                        $this->commandResults['messages'][] = 'Database synced and sanitized from '
-                            . $alias . ' for ' . $uri;
+                        $this->commandResults['messages'][] = 'Database synced'
+                            . ($this->command->getConfig('sanitize_databases_on_sync') ? ' and sanitized' : '')
+                            . ' from ' . $alias . ' for ' . $uri;
                     } else {
                         $errors = true;
                         // Put the error in the errors array.
-                        $this->errors[] = 'Failed to import configuration for ' . $uri . ': '
-                            . $process3->getErrorOutput();
+                        $this->setError('Failed to import configuration for ' . $uri . ': '
+                            . $process3->getErrorOutput());
                     }
-                } else {
-                    $errors = true;
-                    // Put the error in the errors array.
-                    $this->errors[] = 'Failed to sanitize database from ' . $alias . ' '
-                        . $uri . ': ' . $process2->getErrorOutput();
                 }
                 $this->command->io->progressFinish();
                 if (!$errors) {
@@ -786,8 +797,8 @@ class Site
                 }
             } else {
                 // Put the error in the errors array.
-                $this->errors[] = 'Failed to sync database from ' . $alias . ' '
-                    . $uri . ': ' . $process->getErrorOutput();
+                $this->setError('Failed to sync database from ' . $alias . ' '
+                    . $uri . ': ' . $process->getErrorOutput());
                 $success = false;
             }
         }
@@ -810,7 +821,7 @@ class Site
             // Run the drush sql-dump command.
             $backup_directory = $this->backupDirectory($uri);
             if (!$backup_directory) {
-                $this->errors[] = 'Failed to establish backup directory for ' . $uri;
+                $this->setError('Failed to establish backup directory for ' . $uri);
                 $success = false;
                 break;
             }
@@ -826,8 +837,8 @@ class Site
                 $this->command->io->newLine();
             } else {
                 // Put the error in the errors array.
-                $this->errors[] = 'Failed to backup database for ' . $uri . ': '
-                    . $process->getErrorOutput();
+                $this->setError('Failed to backup database for ' . $uri . ': '
+                    . $process->getErrorOutput());
                 $success = false;
             }
         }
@@ -853,7 +864,7 @@ class Site
         if (!is_dir($full_db_backup_path)) {
             // If the directory does not exist, create it.
             if (!mkdir($full_db_backup_path, 0755, true)) {
-                $this->errors[] = 'Could not create directory for database backup: ' . $full_db_backup_path;
+                $this->setError('Could not create directory for database backup: ' . $full_db_backup_path);
                 return false;
             }
         }
@@ -956,6 +967,15 @@ class Site
         $this->commandResults['core_status'] = $update_result['core'] ? 'success' : 'unchanged';
         $this->commandResults['other_status'] = $other_updates ? 'success' : 'unchanged';
         $this->commandResults['status'] = ($update_result['core'] == $other_updates) ? 'success' : 'mixed';
+
+        $commit_result = $this->commitChangesAndPush($update_result, $other_updates);
+        if ($commit_result) {
+            $this->command->success('Changes successfully committed and pushed.');
+            $this->command->io->newLine();
+        } else {
+            $this->command->warning('Errors occurred committing and pushing the changes. See log for details.');
+            $this->command->io->newLine();
+        }
     }
 
     /**
@@ -975,7 +995,7 @@ class Site
             // Now run a git diff on the file.
             $process = $this->runGitCommand('diff', [$file]);
             if (!$process->isSuccessful()) {
-                $this->errors[] = 'Git diff failed: ' . $process->getErrorOutput();
+                $this->setError('Git diff failed: ' . $process->getErrorOutput());
                 continue;
             }
             $diff = $process->getOutput();
@@ -991,6 +1011,65 @@ class Site
             // Now revert the file.
             $process = $this->runGitCommand('checkout', [$file]);
         }
+    }
+
+    /**
+     * Commit changes to git repo and push to remote.
+     *
+     * @param array $update_result
+     *   The update result array.
+     * @param bool $has_other_updates
+     *   Whether there are other (non-core) updates.
+     *
+     * @return bool
+     *   Whether the commit and push was successful.
+     */
+    protected function commitChangesAndPush(array $update_result, bool $has_other_updates): bool
+    {
+        $commit_message = "Drupal ";
+        if ($update_result['core']) {
+            $commit_message .= "Core";
+        }
+        if ($has_other_updates) {
+            if ($update_result['core']) {
+                $commit_message .= ' and ';
+            }
+            $update_types = array_keys(array_filter($update_result));
+            // Exclude "core" from the list.
+            $update_types = array_filter($update_types, function ($type) {
+                return $type != 'core';
+            });
+            $commit_message .= implode('/', $update_types);
+        }
+        $commit_message .= " updates";
+
+        if (!empty($this->commandResults['messages'])) {
+            $commit_message .= PHP_EOL . PHP_EOL . implode(PHP_EOL, $this->commandResults['messages']);
+        }
+        $this->command->info('Committing changes to git. Commit message:');
+        $this->command->io->write($commit_message);
+        $this->command->io->newLine(2);
+        $this->runGitCommand('add', ['-A']);
+        $process = $this->runGitCommand('commit', [
+            '--author=' . escapeshellarg($this->command->getConfig('git.commit_author')),
+            '--message', escapeshellarg($commit_message),
+        ]);
+        if (!$process->isSuccessful() && $this->applyGitChanges) {
+            // Only note errors if we are actually applying the changes.
+            $this->commandResults['messages'][] = 'Git commit failed. Any error output from git follows.';
+            $this->commandResults['messages'][] = $process->getErrorOutput();
+            $this->setError('Git commit failed: ' . $process->getErrorOutput());
+            return false;
+        }
+        $process = $this->runGitCommand('push');
+        if (!$process->isSuccessful() && $this->applyGitChanges) {
+            // Only note errors if we are actually applying the changes.
+            $this->commandResults['messages'][] = 'Git push failed. Any error output from git follows.';
+            $this->commandResults['messages'][] = $process->getErrorOutput();
+            $this->setError('Git push failed: ' . $process->getErrorOutput());
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -1023,8 +1102,7 @@ class Site
                 'master',
             ]);
 
-            // Put the error in the errors array.
-            $this->errors[] = 'Composer update failed: ' . $process->getErrorOutput();
+            $this->setError('Composer update failed: ' . $process->getErrorOutput());
         }
     }
 
@@ -1038,7 +1116,7 @@ class Site
         $composerFile = file_get_contents($this->path . '/composer.json');
         $composerLock = file_get_contents($this->path . '/composer.lock');
         if (!$composerFile || !$composerLock) {
-            $this->errors[] = 'Could not read composer files.';
+            $this->setError('Could not read composer files.');
             throw new \Exception('Could not read composer files.');
         }
         $this->composerFileContents = json_decode($composerFile);
