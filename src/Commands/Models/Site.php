@@ -675,7 +675,6 @@ class Site
             throw new \Exception('Failed to push local branch ' . $update_branch . ' to remote: '
                 . $process->getErrorOutput());
         }
-        $this->command->io->newLine();
         $this->command->success('Branch ' . $update_branch . ' is ready for updates!');
         $this->command->io->newLine();
     }
