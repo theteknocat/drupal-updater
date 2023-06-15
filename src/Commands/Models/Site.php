@@ -724,7 +724,9 @@ class Site
         }
         foreach ($this->siteAliases as $uri => $alias) {
             $errors = false;
-            $this->command->info('Sync and sanitize production database from ' . $alias . ' for ' . $uri . '...');
+            $this->command->info('Sync'
+                . ($this->command->getConfig('sanitize_databases_on_sync') ? ' and sanitize' : '')
+                . ' production database from ' . $alias . ' for ' . $uri . '...');
             $this->command->io->newLine();
             $process = $this->runDrushCommand('sql-sync', [
                 $alias,
@@ -732,15 +734,24 @@ class Site
                 '--uri=' . $uri,
             ], 300, true);
             if ($process->isSuccessful()) {
-                $this->command->success('Sync complete, Sanitizing...');
+                $this->command->success('Sync complete, cleaning up...');
                 $this->command->io->newLine();
-                $this->command->io->progressStart(3);
-                // Run the drush sql-sanitize command.
-                $process2 = $this->runDrushCommand('sql-sanitize', [
-                    '--uri=' . $uri,
-                ]);
-                if ($process2->isSuccessful()) {
+                $steps = $this->command->getConfig('sanitize_databases_on_sync') ? 3 : 2;
+                $this->command->io->progressStart($steps);
+                if ($this->command->getConfig('sanitize_databases_on_sync')) {
+                    // Run the drush sql-sanitize command.
+                    $process2 = $this->runDrushCommand('sql-sanitize', [
+                        '--uri=' . $uri,
+                    ]);
                     $this->command->io->progressAdvance();
+                    if (!$process2->isSuccessful()) {
+                        $errors = true;
+                        // Put the error in the errors array.
+                        $this->errors[] = 'Failed to sanitize database from ' . $alias . ' for '
+                            . $uri . ': ' . $process2->getErrorOutput();
+                    }
+                }
+                if (!$errors) {
                     // Now rebuild the cache and import configuration.
                     // We won't bother checking the success of the cache rebuild.
                     $this->runDrushCommand('cr', [
