@@ -580,6 +580,9 @@ abstract class Command extends BaseCommand implements CommandInterface
             $this->siteList = array_filter(
                 $this->siteList,
                 function ($site) use ($uri) {
+                    if (is_array($uri)) {
+                        return in_array($site['uri'], $uri);
+                    }
                     return $site['uri'] === $uri;
                 }
             );
@@ -591,7 +594,12 @@ abstract class Command extends BaseCommand implements CommandInterface
                 || ($this->acceptsUriArgument() && $this->requiresUriArgument())) {
                 $this->io->section('Available sites:');
                 foreach ($this->siteList as $index => $site) {
-                    $this->io->writeln('[<fg=yellow>' . $index . '</>]: ' . $site['uri']);
+                    if (is_array($site['uri'])) {
+                        $display_uri = implode(', ', $site['uri']);
+                    } else {
+                        $display_uri = $site['uri'];
+                    }
+                    $this->io->writeln('[<fg=yellow>' . $index . '</>]: ' . $display_uri);
                 }
                 $allowed_choices = array_keys($this->siteList);
                 $index = $this->io->ask(
