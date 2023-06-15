@@ -1006,7 +1006,6 @@ class Site
 
             // Put the error in the errors array.
             $this->errors[] = 'Composer update failed: ' . $process->getErrorOutput();
-            throw new \Exception('Composer update failed.');
         }
     }
 
