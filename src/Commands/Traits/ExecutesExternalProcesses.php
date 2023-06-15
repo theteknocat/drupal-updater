@@ -173,22 +173,36 @@ trait ExecutesExternalProcesses
         $process = new Process($options);
         $process->setTimeout($timeout);
         if ($streamOutput || $logOutput) {
-            $process->run(function ($type, $buffer) use ($streamOutput, $logOutput) {
+            if ($logOutput) {
+                $this->getCommandObject()->log(
+                    'Command output:',
+                    LogLevel::DEBUG,
+                    true
+                );
+            }
+            $logLines = [];
+            $process->run(function ($type, $buffer) use ($streamOutput, $logOutput, &$logLines) {
                 // Trim the buffer and break on newlines:
                 $buffer_lines = explode("\n", trim($buffer));
                 foreach ($buffer_lines as $line) {
-                    $line = trim($line);
-                    if ($logOutput) {
-                        if (!empty($line)) {
-                            $this->getCommandObject()->log(trim($line), LogLevel::DEBUG, true);
-                        }
-                    } elseif ($streamOutput) {
+                    $line = rtrim($line);
+                    if ($streamOutput) {
                         $this->getCommandObject()->io->text('  <fg=blue>|</> ' . $line);
+                    }
+                    if ($logOutput) {
+                        $logLines[] = $line;
                     }
                 }
             });
             if ($streamOutput) {
                 $this->getCommandObject()->io->newLine();
+            }
+            if ($logOutput) {
+                $this->getCommandObject()->log(
+                    $logLines,
+                    LogLevel::DEBUG,
+                    true
+                );
             }
         } else {
             $process->run();
