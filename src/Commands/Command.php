@@ -581,7 +581,8 @@ abstract class Command extends BaseCommand implements CommandInterface
             // If the list option was specified, or the command boths accepts
             // and requires the uri argument, then list all sites and request
             // input to choose one.
-            if (($this->input->hasOption('list') && $this->input->getOption('list')) || ($this->acceptsUriArgument() && $this->requiresUriArgument())) {
+            if (($this->input->hasOption('list') && $this->input->getOption('list'))
+                || ($this->acceptsUriArgument() && $this->requiresUriArgument())) {
                 $this->io->section('Available sites:');
                 foreach ($this->siteList as $index => $site) {
                     $this->io->writeln('[<fg=yellow>' . $index . '</>]: ' . $site['uri']);
