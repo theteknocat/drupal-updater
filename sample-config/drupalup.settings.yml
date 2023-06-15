@@ -15,7 +15,7 @@ post_execution_script: ''
 # OPTIONAL: List of files to revert after updates are completed. If they are reverted, a diff will be
 # generated and included in the email notification and commit message. This is useful if you have made
 # changes to things like the .gitignore, .htaccess or development.services.yml files that you want to
-# retain after updates, but still wan to ensure you can apply any important updates to them from drupal
+# retain after updates, but still want to ensure you can apply any important updates to them from drupal
 # core. If your sites do not always have a consistent docroot folder name you can use the [docroot] token
 # and the script will replace that with the actual docroot folder name.
 post_update_revert_files:

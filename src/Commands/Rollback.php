@@ -66,7 +66,7 @@ class Rollback extends Command
                 );
             } else {
                 $question = new ConfirmationQuestion(
-                    'Are you sure you wan to continue?',
+                    'Are you sure you want to continue?',
                     false
                 );
             }
