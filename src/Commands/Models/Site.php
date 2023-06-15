@@ -463,6 +463,7 @@ class Site
             $docroot . '/core',
             $docroot . '/modules/contrib',
             $docroot . '/themes/contrib',
+            $docroot . '/libraries',
         ]);
         if (!$process->isSuccessful()) {
             throw new \Exception('Could not delete vendor, core, modules/contrib, and themes/contrib folders.');
