@@ -974,9 +974,9 @@ class Site
             }
             $this->commandResults['messages'][] = "The " . $file
                 . " file was modified by the update process but was reverted before committing. "
-                . "Git diff follows for reference.\r\n";
-            $this->commandResults['messages'][] = "```\r\n"
-                . $diff . "\r\n```\r\n";
+                . "Git diff follows for reference." . PHP_EOL;
+            $this->commandResults['messages'][] = "```" . PHP_EOL
+                . $diff . PHP_EOL . "```" . PHP_EOL;
             // Now revert the file.
             $process = $this->runGitCommand('checkout', [$file]);
         }
@@ -1036,13 +1036,18 @@ class Site
         // post-update-cmd scripts that contain drush cr and/or drush updb.
         // If it does, then we don't need to run those commands separately.
         if (!empty($this->composerFileContents->scripts)) {
-            foreach ($this->composerFileContents->scripts as $script_type => $script) {
+            foreach ($this->composerFileContents->scripts as $script_type => $scripts) {
                 if ($script_type == 'post-install-cmd' || $script_type == 'post-update-cmd') {
-                    if (str_contains($script, 'drush cr')) {
-                        $this->composerRebuildCaches = true;
+                    if (!is_array($scripts)) {
+                        $scripts = [$scripts];
                     }
-                    if (str_contains($script, 'drush updb')) {
-                        $this->composerUpdateDatabase = true;
+                    foreach ($scripts as $script) {
+                        if (str_contains($script, 'drush cr') && !$this->composerRebuildCaches) {
+                            $this->composerRebuildCaches = true;
+                        }
+                        if (str_contains($script, 'drush updb') && !$this->composerUpdateDatabase) {
+                            $this->composerUpdateDatabase = true;
+                        }
                     }
                 }
             }
@@ -1157,62 +1162,63 @@ class Site
                 // This item is unique and will always be updated, never new.
                 $result['core'] = true;
                 $core_message = "**Drupal Core was updated from " . $package['old_version']
-                    . " to " . $package['version'] . "**\r\n";
+                    . " to " . $package['version'] . "**" . PHP_EOL;
             } elseif (in_array($package['type'], $module_package_types)) {
                 if (empty($modules_message)) {
                     $result['module'] = true;
-                    $modules_message = "**The following " . $install_type . " Drupal modules were installed:**\r\n\r\n";
+                    $modules_message = "**The following " . $install_type . " Drupal modules were installed:**"
+                        . PHP_EOL . PHP_EOL;
                 }
                 $modules_message .= "* `" . $package['name'] . "` (";
                 if (isset($package['old_version'])) {
                     $modules_message .= $package['old_version'] . " => ";
                 }
-                $modules_message .= $package['version'] . ")\r\n";
+                $modules_message .= $package['version'] . ")" . PHP_EOL;
             } elseif (in_array($package['type'], $theme_package_types)) {
                 if (empty($themes_message)) {
                     $result['theme'] = true;
                     $themes_message = "**The following " . $install_type
-                        . " Drupal themes were installed:**\r\n\r\n";
+                        . " Drupal themes were installed:**" . PHP_EOL . PHP_EOL;
                 }
                 $themes_message .= "* `" . $package['name'] . "` (";
                 if (isset($package['old_version'])) {
                     $themes_message .= $package['old_version'] . " => ";
                 }
-                $themes_message .= $package['version'] . ")\r\n";
+                $themes_message .= $package['version'] . ")" . PHP_EOL;
             } elseif (in_array($package['type'], $library_package_types)) {
                 if (empty($libraries_message)) {
                     $result['library'] = true;
                     $libraries_message = "**The following " . $install_type
-                        . " Drupal libraries were installed:**\r\n\r\n";
+                        . " Drupal libraries were installed:**" . PHP_EOL;
                 }
                 $libraries_message .= "* `" . $package['name'] . "` (";
                 if (isset($package['old_version'])) {
                     $libraries_message .= $package['old_version'] . " => ";
                 }
-                $libraries_message .= $package['version'] . ")\r\n";
+                $libraries_message .= $package['version'] . ")" . PHP_EOL;
             } elseif (in_array($package['type'], $profile_package_types)) {
                 if (empty($profiles_message)) {
                     $result['profile'] = true;
                     $profiles_message = "**The following " . $install_type
-                        . " Drupal profiles were installed:**\r\n\r\n";
+                        . " Drupal profiles were installed:**" . PHP_EOL;
                 }
                 $profiles_message .= "* `" . $package['name'] . "` (";
                 if (isset($package['old_version'])) {
                     $profiles_message .= $package['old_version'] . " => ";
                 }
-                $profiles_message .= $package['version'] . ")\r\n";
+                $profiles_message .= $package['version'] . ")" . PHP_EOL;
             } else {
                 if (empty($others_message)) {
                     $result['other'] = true;
                     $others_message = "**The following additional " . $install_type
                         . " packages (vendor libraries or "
-                        . "other dependencies) were installed:**\r\n\r\n";
+                        . "other dependencies) were installed:**" . PHP_EOL . PHP_EOL;
                 }
                 $others_message .= "* `" . $package['name'] . "` (";
                 if (isset($package['old_version'])) {
                     $others_message .= $package['old_version'] . " => ";
                 }
-                $others_message .= $package['version'] . ")\r\n";
+                $others_message .= $package['version'] . ")" . PHP_EOL;
             }
         }
         if (!empty($core_message)) {
