@@ -1004,6 +1004,15 @@ class Site
             $this->commandResults['messages'][] = 'Composer update failed. Any error output from composer follows.';
             $this->commandResults['messages'][] = $process->getErrorOutput();
 
+            // Reset the git repo and revert to the master branch.
+            $this->runGitCommand('reset', [
+                '--hard',
+                'HEAD',
+            ]);
+            $this->runGitCommand('checkout', [
+                'master',
+            ]);
+
             // Put the error in the errors array.
             $this->errors[] = 'Composer update failed: ' . $process->getErrorOutput();
         }
