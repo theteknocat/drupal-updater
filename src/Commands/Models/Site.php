@@ -880,7 +880,7 @@ class Site
             // Nothing was updated.
             $this->command->info('No composer changes were detected.');
             $this->command->io->newLine();
-            // Reset the git repo, if we are applying git changes.
+            // Reset the git repo and revert to the master branch.
             $this->runGitCommand('reset', [
                 '--hard',
                 'HEAD',
