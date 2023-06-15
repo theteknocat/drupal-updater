@@ -510,6 +510,12 @@ abstract class Command extends BaseCommand implements CommandInterface
             $log_file = $log_file_path . '/drupalup.log';
             if (!is_scalar($message)) {
                 $message = json_encode($message);
+            } else {
+                // If the message contains line breaks, turn it into an array
+                // and encode it as JSON.
+                if (strpos($message, PHP_EOL) !== false) {
+                    $message = json_encode(explode(PHP_EOL, $message));
+                }
             }
             file_put_contents(
                 $log_file,
