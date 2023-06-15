@@ -43,7 +43,7 @@ trait OutputsMessages
      */
     public function warning(string $message): void
     {
-        $this->io->writeln('<bg=yellow;fg=black>[warning]</> <fg=yellow;bg=default>' . $message . '</>');
+        $this->io->writeln('<bg=yellow;fg=white>[warning]</> <fg=yellow;bg=default>' . $message . '</>');
     }
 
     /**
@@ -69,6 +69,6 @@ trait OutputsMessages
      */
     public function success(string $message): void
     {
-        $this->io->writeln('<bg=green;fg=black>[success]</> <fg=green;bg=default>' . $message . '</>');
+        $this->io->writeln('<bg=green;fg=white>[success]</> <fg=green;bg=default>' . $message . '</>');
     }
 }
