@@ -289,6 +289,11 @@ abstract class Command extends BaseCommand implements CommandInterface
             $this->warning('Log file path is not writable. Log file will not be written.');
         }
 
+        if (!isset($this->config['sanitize_databases_on_sync'])) {
+            $this->log('No sanitize_databases_on_sync value defined.', LogLevel::ERROR);
+            $valid_config = false;
+        }
+
         $validator = Validation::createValidator();
 
         // Validate mail configuration values.
@@ -382,6 +387,11 @@ abstract class Command extends BaseCommand implements CommandInterface
         }
         if (empty($this->config['git']['update_branch'])) {
             $this->config['git']['update_branch'] = 'drupal-updates';
+        }
+
+        if ($this->config['git']['main_branch'] == $this->config['git']['update_branch']) {
+            $this->log('Git main branch and update branch cannot be the same.', LogLevel::ERROR);
+            $valid_config = false;
         }
 
         return $valid_config;
