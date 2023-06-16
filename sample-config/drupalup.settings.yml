@@ -27,6 +27,10 @@ post_update_revert_files:
   - '[docroot]/sites/development.services.yml'
 # REQUIRED: Whether or not to sanitize the local database after syncing from production.
 sanitize_databases_on_sync: true
+# OPTIONAL: whether or not to always send an email notification after updates are completed.
+# If false or not specified, an email will only be sent if the --notify flag is used when running
+# the script.
+always_notify: false
 mail:
   # REQUIRED: Notification email address.
   notification_email: 'johnny.appleseed@example.com'
