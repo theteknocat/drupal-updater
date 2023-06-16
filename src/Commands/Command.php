@@ -289,8 +289,9 @@ abstract class Command extends BaseCommand implements CommandInterface
             $this->warning('Log file path is not writable. Log file will not be written.');
         }
 
-        if (!isset($this->config['sanitize_databases_on_sync'])) {
-            $this->log('No sanitize_databases_on_sync value defined.', LogLevel::ERROR);
+        if (!isset($this->config['sanitize_databases_on_sync'])
+            || !is_bool($this->config['sanitize_databases_on_sync'])) {
+            $this->log('No sanitize_databases_on_sync value defined or not a boolean value.', LogLevel::ERROR);
             $valid_config = false;
         }
 
@@ -326,9 +327,12 @@ abstract class Command extends BaseCommand implements CommandInterface
             $valid_config = false;
         }
 
-        if (empty($this->config['mail']['smtp_port'])) {
+        if (!isset($this->config['mail']['smtp_port'])) {
             $this->log('No SMTP port defined.', LogLevel::ERROR);
             $valid_config = false;
+        } else {
+            // Make sure the port is an integer.
+            $this->config['mail']['smtp_port'] = (int) $this->config['mail']['smtp_port'];
         }
 
         $allowed_smtp_secure_methods = [
