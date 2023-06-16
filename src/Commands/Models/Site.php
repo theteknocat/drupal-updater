@@ -220,6 +220,16 @@ class Site
     }
 
     /**
+     * Whether or not the site is a multisite.
+     *
+     * @return bool
+     */
+    public function isMultisite(): bool
+    {
+        return $this->isMultisite;
+    }
+
+    /**
      * Validate the provided site info.
      *
      * @param array $siteInfo
@@ -345,6 +355,16 @@ class Site
     public function getUris(): array
     {
         return $this->uris;
+    }
+
+    /**
+     * Get the site's path.
+     *
+     * @return string
+     */
+    public function getPath(): string
+    {
+        return $this->path;
     }
 
     /**
