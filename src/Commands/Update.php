@@ -43,7 +43,8 @@ class Update extends Command
                 'notify',
                 'N',
                 InputOption::VALUE_NONE,
-                'Send an email notification on completion.'
+                'Send an email notification on completion. Only needed if the always_notify'
+                    . ' config setting is omitted or set to false.'
             )
             ->addOption(
                 'list',
