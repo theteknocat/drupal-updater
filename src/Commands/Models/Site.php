@@ -833,12 +833,7 @@ class Site
                     }
                 }
                 $this->command->io->progressFinish();
-                if (!$errors) {
-                    $this->command->success('Sanitization complete!');
-                    $this->command->io->newLine();
-                } else {
-                    $success = false;
-                }
+                $success = (!$errors);
             } else {
                 // Put the error in the errors array.
                 $this->setError('Failed to sync database from ' . $alias . ' '
