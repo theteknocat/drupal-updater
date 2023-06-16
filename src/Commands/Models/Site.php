@@ -155,6 +155,13 @@ class Site
     public bool $multisitePartialBackupsOnly = false;
 
     /**
+     * List of backed up database files for the site.
+     *
+     * @var array
+     */
+    protected $dbBackupFiles = [];
+
+    /**
      * Construct a site object and initialize its properties.
      *
      * @param array $siteInfo
@@ -190,6 +197,26 @@ class Site
     protected function getCommandObject(): Command
     {
         return $this->command;
+    }
+
+    /**
+     * Return the command results array.
+     *
+     * @return array
+     */
+    public function getCommandResults(): array
+    {
+        return $this->commandResults;
+    }
+
+    /**
+     * Return the DB backup files for the site.
+     *
+     * @return array
+     */
+    public function getDbBackupFiles(): array
+    {
+        return $this->dbBackupFiles;
     }
 
     /**
@@ -778,9 +805,6 @@ class Site
                     ]);
                     if ($process3->isSuccessful()) {
                         $this->command->io->progressAdvance();
-                        $this->commandResults['messages'][] = 'Database synced'
-                            . ($this->command->getConfig('sanitize_databases_on_sync') ? ' and sanitized' : '')
-                            . ' from ' . $alias . ' for ' . $uri;
                     } else {
                         $errors = true;
                         // Put the error in the errors array.
@@ -830,8 +854,7 @@ class Site
                 '--uri=' . $uri,
             ]);
             if ($process->isSuccessful()) {
-                $this->commandResults['messages'][] = 'Database backed up to '
-                    . $backup_directory . '/db-backup.sql';
+                $this->dbBackupFiles[] = $backup_directory . '/db-backup.sql';
                 $this->command->success('Database backed up to:');
                 $this->command->io->text($backup_directory . '/db-backup.sql');
                 $this->command->io->newLine();
@@ -920,7 +943,7 @@ class Site
             return;
         }
 
-        $steps = 0;
+        $steps = 1;
         if (!$this->composerRebuildCaches) {
             $steps++;
         }
@@ -945,6 +968,17 @@ class Site
             $this->runDrushCommand('cr');
             $this->command->io->progressAdvance();
         }
+
+        $update_result = $this->compilePackageUpdateInfo($result['updated_packages'] ?? [], 'updated');
+        $other_updates = ($update_result['module']
+            || $update_result['theme']
+            || $update_result['library']
+            || $update_result['profile']
+            || $update_result['other']);
+        $this->compilePackageUpdateInfo($result['new_packages'] ?? [], 'new');
+
+        $this->command->io->progressAdvance();
+
         if (null !== $post_update_revert_files) {
             foreach ($post_update_revert_files as $file) {
                 $this->runDiffAndRevert($post_update_revert_files);
@@ -954,14 +988,6 @@ class Site
         if ($steps > 0) {
             $this->command->io->progressFinish();
         }
-
-        $update_result = $this->compilePackageUpdateInfo($result['updated_packages'] ?? [], 'updated');
-        $other_updates = ($update_result['module']
-            || $update_result['theme']
-            || $update_result['library']
-            || $update_result['profile']
-            || $update_result['other']);
-        $this->compilePackageUpdateInfo($result['new_packages'] ?? [], 'new');
 
         // Now set status messages.
         $this->commandResults['core_status'] = $update_result['core'] ? 'success' : 'unchanged';
@@ -1005,7 +1031,7 @@ class Site
             }
             $this->commandResults['messages'][] = "The " . $file
                 . " file was modified by the update process but was reverted before committing. "
-                . "Git diff follows for reference." . PHP_EOL;
+                . "Git diff follows for reference." . PHP_EOL . PHP_EOL;
             $this->commandResults['messages'][] = "```" . PHP_EOL
                 . $diff . PHP_EOL . "```" . PHP_EOL;
             // Now revert the file.
@@ -1052,20 +1078,22 @@ class Site
         $this->runGitCommand('add', ['-A']);
         $process = $this->runGitCommand('commit', [
             '--author=' . escapeshellarg($this->command->getConfig('git.commit_author')),
-            '--message', escapeshellarg($commit_message),
+            '--message', $commit_message,
         ]);
         if (!$process->isSuccessful() && $this->applyGitChanges) {
             // Only note errors if we are actually applying the changes.
-            $this->commandResults['messages'][] = 'Git commit failed. Any error output from git follows.';
-            $this->commandResults['messages'][] = $process->getErrorOutput();
+            $this->commandResults['messages'][] = 'Git commit failed. Any error output from git follows.'
+                . PHP_EOL;
+            $this->commandResults['messages'][] = $process->getErrorOutput() . PHP_EOL;
             $this->setError('Git commit failed: ' . $process->getErrorOutput());
             return false;
         }
         $process = $this->runGitCommand('push');
         if (!$process->isSuccessful() && $this->applyGitChanges) {
             // Only note errors if we are actually applying the changes.
-            $this->commandResults['messages'][] = 'Git push failed. Any error output from git follows.';
-            $this->commandResults['messages'][] = $process->getErrorOutput();
+            $this->commandResults['messages'][] = 'Git push failed. Any error output from git follows.'
+                . PHP_EOL;
+            $this->commandResults['messages'][] = $process->getErrorOutput() . PHP_EOL;
             $this->setError('Git push failed: ' . $process->getErrorOutput());
             return false;
         }
@@ -1090,8 +1118,9 @@ class Site
             $this->commandResults['other_status'] = 'failed';
             $this->commandResults['status'] = 'failed';
 
-            $this->commandResults['messages'][] = 'Composer update failed. Any error output from composer follows.';
-            $this->commandResults['messages'][] = $process->getErrorOutput();
+            $this->commandResults['messages'][] = 'Composer update failed. Any error output from composer follows.'
+                . PHP_EOL;
+            $this->commandResults['messages'][] = $process->getErrorOutput() . PHP_EOL;
 
             // Reset the git repo and revert to the master branch.
             $this->runGitCommand('reset', [
