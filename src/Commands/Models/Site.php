@@ -1043,8 +1043,8 @@ class Site
                 // No diff, so nothing to revert.
                 continue;
             }
-            $this->commandResults['messages'][] = "The " . $file
-                . " file was modified by the update process but was reverted before committing. "
+            $this->commandResults['messages'][] = "**The " . $file
+                . " file was modified by the update process but was reverted before committing.** "
                 . "Git diff follows for reference." . PHP_EOL . PHP_EOL;
             $this->commandResults['messages'][] = "```" . PHP_EOL
                 . $diff . PHP_EOL . "```" . PHP_EOL;
