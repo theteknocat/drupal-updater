@@ -2,7 +2,13 @@
 
 namespace TheTeknocat\DrupalUp\Commands;
 
+use League\CommonMark\CommonMarkConverter;
+use Psr\Log\LogLevel;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
+use Symfony\Component\Mailer\Mailer;
+use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
+use Symfony\Component\Mime\Email;
 use TheTeknocat\DrupalUp\Commands\Models\Site;
 
 /**
@@ -23,6 +29,16 @@ class Update extends Command
      * @var bool
      */
     protected bool $notify = false;
+
+    /**
+     * Map short statuses to longer, friendly ones.
+     */
+    protected $friendlyStatuses = [
+        'failed'    => 'Update failed',
+        'unchanged' => 'No update required',
+        'success'   => 'Update successfully completed',
+        'mixed'     => 'Mixed',
+    ];
 
     /**
      * {@inheritdoc}
@@ -156,12 +172,189 @@ class Update extends Command
             $success = false;
         }
 
-        if ($this->notify) {
-            // @todo compose and send notification email.
-        }
-
         $this->logSiteErrors($site);
 
+        $this->summariseAndNotify($site);
+
         return $success;
+    }
+
+    /**
+     * Summarise, log and notify of each site's update status.
+     *
+     * @param \TheTeknocat\DrupalUp\Commands\Models\Site $site
+     *   The site object.
+     */
+    protected function summariseAndNotify(Site $site): void
+    {
+        if (!$this->notify) {
+            return;
+        }
+        $this->info('Summarising update results...');
+        $summary = $this->buildSummaryMessage($site);
+        if (empty($summary)) {
+            $this->info('Nothing to report - site was unchanged and no errors occurred.');
+            return;
+        }
+        $this->info('Sending email notification...');
+        $this->emailNotification($summary['subject'], $summary['message']);
+    }
+
+    /**
+     * Build the summary message for a given site.
+     *
+     * @param \TheTeknocat\DrupalUp\Commands\Models\Site $site
+     *   The site object.
+     *
+     * @return array|null
+     *   An array with subject and message, or null if no results.
+     */
+    private function buildSummaryMessage(Site $site): array|null
+    {
+        $commandResults = $site->getCommandResults();
+        $errors = $site->getErrors();
+
+        if (empty($errors) && (empty($commandResults) || $commandResults['status'] == 'unchanged')) {
+            return null;
+        }
+
+        $display_status = $commandResults['status'];
+        if ($display_status == 'mixed' && $commandResults['core_status'] != 'failed'
+            && $commandResults['module_status'] != 'failed') {
+            $display_status = 'success';
+        }
+
+        $subject = "Drupal update " . $display_status . " for " . implode(', ', $site->getUris());
+        if ($site->isMultiSite()) {
+            $subject .= " (multisite)";
+        }
+        $message = "This email provides a summary of the Drupal updates attempted for:" . PHP_EOL . PHP_EOL;
+        foreach ($site->getUris() as $uri) {
+            $full_url = 'http://' . $uri;
+            $message .= "* [" . $uri . "](" . $full_url . ")" . PHP_EOL;
+            $message .= "   **File path:** " . $site->getPath() . PHP_EOL;
+        }
+        $message .= PHP_EOL;
+        if ($this->isDryRun) {
+            $message .= PHP_EOL . "**Dry-run only:** No git changes were committed or pushed." . PHP_EOL . PHP_EOL;
+        }
+        if ($commandResults['status'] == 'mixed') {
+            $message .= "**Core update status:** "
+                . $this->friendlyStatuses[$commandResults['core_status']] . PHP_EOL;
+            $message .= "**Module update status:** "
+                . $this->friendlyStatuses[$commandResults['module_status']] . PHP_EOL;
+        } else {
+            $message .= "**Status:** " . $this->friendlyStatuses[$display_status] . PHP_EOL;
+        }
+        if ($display_status == 'success') {
+            $message .= PHP_EOL . "The completed updates have been pushed to the remote *"
+                . $this->config['git']['remote_key'] . "* in a new branch "
+                . "called *" . $this->config['git']['update_branch'] . "*. "
+                . "It is now your responsibilty to merge the updates with "
+                . "the *" . $this->config['git']['main_branch'] . "* branch and roll out to production." . PHP_EOL;
+        }
+        if (!empty($commandResults['messages'])) {
+            $message .= PHP_EOL . "**The following messages were generated during the update process:**" . PHP_EOL
+                . PHP_EOL . '---' . PHP_EOL . PHP_EOL;
+            $message .= implode(PHP_EOL, $commandResults['messages']) . PHP_EOL . PHP_EOL;
+        }
+
+        if (!empty($errors)) {
+            $message .= PHP_EOL . "**The following errors were generated during the update process:**" . PHP_EOL
+                . PHP_EOL . '---' . PHP_EOL . PHP_EOL;
+            $message .= implode(PHP_EOL, $errors) . PHP_EOL . PHP_EOL;
+        }
+        $message .= "---" . PHP_EOL . "--End of Line--";
+
+        return [
+            'subject' => $subject,
+            'message' => $message,
+        ];
+    }
+
+    /**
+     * Send an email notification using Symfony mailer.
+     *
+     * @param string @subject
+     *   The message subject.
+     * @param string $message
+     *   The message body.
+     */
+    protected function emailNotification(string $subject, string $message): void
+    {
+        // The following config variables can be used:
+        // - $this->config['mail']['from_email'] - the email address to send from. Required.
+        // - $this->config['mail']['from_email_name'] - the name to send from. Required.
+        // - $this->config['mail']['notification_email'] - the email address to send to. Required.
+        // - $this->config['mail']['smtp_host'] - the SMTP host to use. Required.
+        // - $this->config['mail']['smtp_port'] - the SMTP port to use. Required.
+        // - $this->config['mail']['smtp_user'] - the SMTP username to use. Optional.
+        // - $this->config['mail']['smtp_password'] - the SMTP password to use. Optional.
+        // - $this->config['mail']['use_tls'] - whether or not to use TLS. Required.
+
+        // Use the default mailer with the ESMTP transport.
+        $transport = new EsmtpTransport(
+            $this->config['mail']['smtp_host'],
+            (int) $this->config['mail']['smtp_port'],
+            (bool) $this->config['mail']['use_tls']
+        );
+        if (!empty($this->config['mail']['smtp_user'])) {
+            $transport->setUsername($this->config['mail']['smtp_user']);
+        }
+        if (!empty($this->config['mail']['smtp_password'])) {
+            $transport->setPassword($this->config['mail']['smtp_password']);
+        }
+        $mailer = new Mailer($transport);
+
+        $email = (new Email())
+            ->from($this->config['mail']['from_email'])
+            ->to($this->config['mail']['notification_email'])
+            ->subject($subject)
+            ->text($message)
+            ->html($this->markdownToHtml($message));
+
+        try {
+            $mailer->send($email);
+        } catch (TransportExceptionInterface $e) {
+            $this->log('Error sending email notification: ' . $e->getMessage(), LogLevel::ERROR);
+        }
+    }
+
+    /**
+     * Converts Markdown to HTML.
+     *
+     * Takes care of single linebreaks the way you would expect.
+     *
+     * @param string $src_text
+     *   The source text in Markdown format to convert.
+     *
+     * @return string
+     *   The text converted to HTML.
+     */
+    protected function markdownToHtml(string $src_text): string
+    {
+        $src_text = htmlspecialchars(trim($src_text), ENT_QUOTES, 'UTF-8');
+        // Split the $src_text into an array on PHP_EOL.
+        $bits = explode(PHP_EOL, $src_text);
+        // Trim all array values (gets rid of any extra breaks).
+        $bits = array_map(function ($value) {
+            return trim($value);
+        }, $bits);
+        // Add spaces to the end of any lines not followed by an empty line.
+        // This forces every soft return to cause markdown to add a <br> tag.
+        foreach ($bits as $index => &$bit) {
+            $bit = trim($bit);
+            if (!empty($bit) && !empty($bits[$index + 1])) {
+                $bit .= "  ";
+            }
+        }
+        // Glue back together with line breaks.
+        $src_text = implode(PHP_EOL, $bits);
+        // Convert to HTML with Markdown and return.
+        $converter = new CommonMarkConverter([
+            'html_input' => 'escape',
+            'allow_unsafe_links' => false,
+        ]);
+        return (string) $converter->convert($src_text);
     }
 }
