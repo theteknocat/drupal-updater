@@ -100,7 +100,7 @@ class Update extends Command
     {
         $is_dry_run = $this->input->getOption('dry-run');
         $this->isDryRun = !empty($is_dry_run);
-        $notify = $this->input->getOption('notify');
+        $notify = $this->config['always_notify'] ?? $this->input->getOption('notify') ?? false;
         $this->notify = !empty($notify);
     }
 
