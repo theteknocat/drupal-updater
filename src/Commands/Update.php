@@ -36,8 +36,8 @@ class Update extends Command
                 'dry-run',
                 'd',
                 InputOption::VALUE_NONE,
-                'Run the update in dry-run mode. Git changes will'
-                    . ' not be committed or pushed. Email notification will be sent if enabled.'
+                'Run the update in dry-run mode. Git changes will not be committed or pushed.'
+                    . ' Email notification will be sent if enabled.'
             )
             ->addOption(
                 'notify',
