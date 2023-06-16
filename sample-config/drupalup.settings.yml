@@ -34,6 +34,8 @@ mail:
   smtp_host: 'your.smtp.host'
   # REQUIRED: The SMTP port to send email through.
   smtp_port: 25
+  # REQUIRED: Whether or not to use TLS encryption.
+  use_tls: true
   # OPTIONAL: The SMTP username.
   smtp_user: ''
   # OPTIONAL: The SMTP password.
