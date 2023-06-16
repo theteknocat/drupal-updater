@@ -111,7 +111,16 @@ class Update extends Command
     {
         if (!empty($this->sitesToProcess)) {
             foreach ($this->sitesToProcess as $site) {
-                $this->updateSite($site);
+                $result = $this->updateSite($site);
+                if ($result) {
+                    $this->io->newLine();
+                    $this->success('Update of ' . implode(', ', $site->getUris()) . ' completed successfully.');
+                    $this->io->newLine();
+                } else {
+                    $this->io->newLine();
+                    $this->warning('Errors occurred updating ' . implode(', ', $site->getUris()) . '.');
+                    $this->io->newLine();
+                }
             }
         }
         return 0;
