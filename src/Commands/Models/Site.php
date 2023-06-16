@@ -910,8 +910,7 @@ class Site
         // We run the composer updates twice as occassionally the first run
         // will not update all packages properly, or changes to packages may
         // result in some being removed inadvertently.
-        $this->runComposerUpdates();
-        if (!empty($this->commandResults['status']) && $this->commandResults['status'] == 'failed') {
+        if (!$this->runComposerUpdates()) {
             return;
         }
         $this->runComposerUpdates();
@@ -1103,11 +1102,9 @@ class Site
     /**
      * Execute the composer update command and handle errors.
      *
-     * @return void
-     *
-     * @throws \Exception
+     * @return bool
      */
-    protected function runComposerUpdates(): void
+    protected function runComposerUpdates(): bool
     {
         $process = $this->runComposerCommand('update', [
             '--no-interaction',
@@ -1132,7 +1129,10 @@ class Site
             ]);
 
             $this->setError('Composer update failed: ' . $process->getErrorOutput());
+
+            return false;
         }
+        return true;
     }
 
     /**
