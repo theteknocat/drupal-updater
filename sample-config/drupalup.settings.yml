@@ -4,20 +4,23 @@ composer_path: ''
 # OPTIONAL: path to the git binary file to use. If not specified, the script will
 # attempt to locate it. The script will fail if it cannot be found and verified.
 git_path: ''
-# OPTIONAL: path in which to write log files. If not specified, the script will attempt to use /var/log.
-# If the destination is not writable, no log will be recorded and the email notification will mention this.
+# OPTIONAL: path in which to write log files. If not specified, the script will attempt
+# to use /var/log. If the destination is not writable, no log will be recorded and the
+# email notification will mention this.
 # NOTE: NO TRAILING SLASH!
 log_file_path: ''
-# OPTIONAL: Script to execute after updates are completed. This would be useful if you wanted to have it
-# correct permissions on the files once the update is complete. This command will always be run from
+# OPTIONAL: Script to execute after updates are completed. This would be useful if you
+# wanted to have it correct permissions on the files once the update is complete. This
+# command will always be run from
 # within the site's directory
 post_execution_script: ''
-# OPTIONAL: List of files to revert after updates are completed. If they are reverted, a diff will be
-# generated and included in the email notification and commit message. This is useful if you have made
-# changes to things like the .gitignore, .htaccess or development.services.yml files that you want to
-# retain after updates, but still want to ensure you can apply any important updates to them from drupal
-# core. If your sites do not always have a consistent docroot folder name you can use the [docroot] token
-# and the script will replace that with the actual docroot folder name.
+# OPTIONAL: List of files to revert after updates are completed. If they are reverted, a
+# diff will be generated and included in the email notification and commit message. This
+# is useful if you have made changes to things like the .gitignore, .htaccess or
+# development.services.yml files that you want to retain after updates, but still want to
+# ensure you can apply any important updates to them from drupal core. If your sites do not
+# always have a consistent docroot folder name you can use the [docroot] token and the
+# script will replace that with the actual docroot folder name.
 post_update_revert_files:
   - .gitignore
   - '[docroot]/.htaccess'
