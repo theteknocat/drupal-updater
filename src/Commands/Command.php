@@ -335,14 +335,8 @@ abstract class Command extends BaseCommand implements CommandInterface
             $this->config['mail']['smtp_port'] = (int) $this->config['mail']['smtp_port'];
         }
 
-        $allowed_smtp_secure_methods = [
-            'ssl',
-            'tls',
-        ];
-        if (!empty($this->config['mail']['smtp_secure_method'])
-            && !in_array($this->config['mail']['smtp_secure_method'], $allowed_smtp_secure_methods)) {
-            $this->log('Invalid SMTP secure method defined: '
-                . $this->config['mail']['smtp_secure_method'] . '.', LogLevel::ERROR);
+        if (!isset($this->config['mail']['use_tls']) || !is_bool($this->config['mail']['use_tls'])) {
+            $this->log('No use_tls value defined or not a boolean (true/false) value.', LogLevel::ERROR);
             $valid_config = false;
         }
 
