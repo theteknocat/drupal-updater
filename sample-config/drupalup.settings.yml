@@ -31,12 +31,9 @@ mail:
   # REQUIRED: Notification email address.
   notification_email: 'johnny.appleseed@example.com'
   # REQUIRED: The SMTP hostname to send email through.
-  smtp_host: ''
+  smtp_host: 'your.smtp.host'
   # REQUIRED: The SMTP port to send email through.
-  smtp_port: ''
-  # OPTIONAL: The secure method to use for SMTP connection.
-  # Must be one of 'tls' or 'ssl'.
-  smtp_secure_method: ''
+  smtp_port: 25
   # OPTIONAL: The SMTP username.
   smtp_user: ''
   # OPTIONAL: The SMTP password.
