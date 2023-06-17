@@ -157,14 +157,15 @@ abstract class Command extends BaseCommand implements CommandInterface
         $this->input = $input;
         $this->output = $output;
         $this->initIoStyle($input, $output);
+        // Show app name and version.
+        $this->io->writeln($this->getApplication()->getLongVersion());
+        $this->io->newLine();
         // Load the configuration.
         $this->loadConfiguration();
         // Check for required binaries and configuration.
         if (!$this->validateConfiguration() || !$this->locateGit() || !$this->locateComposer()) {
             throw new \RuntimeException('Unable to locate required binaries or configuration. See log for details.');
         }
-        $this->io->writeln($this->getApplication()->getLongVersion());
-        $this->io->newLine();
     }
 
     /**
