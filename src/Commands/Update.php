@@ -53,7 +53,7 @@ class Update extends Command
                 'd',
                 InputOption::VALUE_NONE,
                 'Run the update in dry-run mode. Git changes will not be committed or pushed.'
-                    . ' Email notification will be sent if enabled.'
+                    . ' Email notification will still be sent if enabled.'
             )
             ->addOption(
                 'notify',
@@ -63,10 +63,11 @@ class Update extends Command
                     . ' config setting is omitted or set to false.'
             )
             ->addOption(
-                'list',
-                'L',
+                'select',
+                's',
                 InputOption::VALUE_NONE,
-                'List all sites and request input on which one to update. Ignored if a uri is provided.'
+                'List all sites for the user to select which one to update. Ignored if a uri is provided.'
+                    . ' If the  --no-interaction option is provided, it has no effect and all sites will be updated.'
             );
         return $this;
     }
