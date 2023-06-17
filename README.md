@@ -14,7 +14,31 @@ A command-line tool for automating Drupal 8+ site updates with the following fea
 
 **NOTE:** This project is still in pre-release alpha version. If you are interested in contributing to the project, you are welcome to fork it and submit a pull request with changes. I would just ask that you create an issue first that you can link to your pull request.
 
-## Configuration Files
+## Installation
+
+The only thing you actually need to use this script is the compiled binary. Head over to the latest release and under the assets download the `drupalup.phar` file. Place this file somewhere in your path (e.g. /usr/local/bin), rename it to remove the .phar extension, and make sure it has execute permission.
+
+You then just need to setup the configuration files, as per the instructions below. You may choose to configure a cron job to run updates regularly, so long as the user running the cron job has access to push to your git remote repository.
+
+### Install with Composer
+
+You can also get a copy of the full source, including the compiled binary, by running:
+
+`composer require theteknocat/drupal/updater`
+
+From there you can copy, or symlink, the binary to a desired folder on your machine to run it.
+
+### Clone with Git
+
+You can of course also clone the code with git, or fork it and then clone it if you want to contribute.
+
+### Compiling the Binary
+
+The codebase does not include code for compiling the binary. Instead, I chose to make my life simple and use the excellent [clue/phar-composer](https://github.com/clue/phar-composer) library. Just install that on your system somewhere and then you can run:
+
+`phar-composer build [/path/to/this/script/root] [/path/to/this/script/root/build/drupalup.phar]`
+
+## Configuration
 
 The updater will look for it's configuration files in the following directories, using the first one it finds in this order of preference:
 
@@ -23,11 +47,9 @@ The updater will look for it's configuration files in the following directories,
 * /usr/local/etc/drupalup
 * /usr/local/etc
 
-The primary configuration file must be named "drupalup.settings.yml" and placed in one of the above locations. The secondary configuration file required is drupalup.sites.yml, which must also be in one of the above locations, ideally in the same place as the drupalup.settings.yml to make it easier to maintain.
+The primary configuration file must be named `drupalup.settings.yml` and placed in one of the above locations. The secondary configuration file required is `drupalup.sites.yml`, which must also be in one of the above locations, ideally in the same place as `drupalup.settings.yml` to make it easier to maintain.
 
-The reason the list of sites is in a separate file from the base configuration is so you can easily maintain just the site list without worrying about accidental changes to the base config.
-
-You can find sample configuration files in the sample-config folder.
+Browse into the `sample-config` folder in the source code and download them to use as a starting point. They are fully documented with comments and as such are not detailed here.
 
 ## Pre-requisites
 
@@ -45,13 +67,17 @@ Composer must be installed on the system since that is what is used to install u
 
 ### Drush
 
-The script will expect to find the drush binary in vendor/bin within the codebase of each site. If it is not found, the site will be skipped and an error notification generated. If you have specified drush under require-dev in the composer file, then the system running this script needs to have the sites all installed with the dev requirements.
+The script will expect to find the drush binary in vendor/bin within the codebase of each site. If it is not found, the site will be skipped and an error notification generated. If you have specified drush under require-dev in the composer file, then the system running this script needs to have the sites all installed with the dev dependencies.
+
+This requirement also automatically prevents it from working on typical Drupal 7 site installations.
 
 ## Commands
 
 This is still a work in progress, but this is what the expected commands will be:
 
 **NOTE:** All commands have a common `--debug` option that writes additional data to the log file for troubleshooting purposes.
+
+This project uses the Symfony console component, which provides the following default commands and options:
 
 ### List Commands
 
