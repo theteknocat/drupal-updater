@@ -191,13 +191,13 @@ class Update extends Command
         if (!$this->notify) {
             return;
         }
-        $this->info('Summarising update results...');
+        $this->io->newLine();
+        $this->info('Summarise results and send email notification...');
         $summary = $this->buildSummaryMessage($site);
         if (empty($summary)) {
             $this->info('Nothing to report - site was unchanged and no errors occurred.');
             return;
         }
-        $this->info('Sending email notification...');
         $this->emailNotification($summary['subject'], $summary['message']);
     }
 
