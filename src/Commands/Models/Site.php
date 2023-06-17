@@ -658,7 +658,8 @@ class Site
             $this->setError('The site does not have a git repository:');
             $this->setError($process->getErrorOutput());
             $this->command->io->newLine(2);
-            throw new \Exception('The site does not have a git repository.');
+            $this->setFailed();
+            throw new \Exception('Unable to validate git repository. See log for details.');
         }
         $output = $process->getOutput();
         if (!empty($output)) {
@@ -668,14 +669,16 @@ class Site
                 $this->setError($line);
             }
             $this->command->io->newLine(2);
-            throw new \Exception('The site codebase contains uncommitted changes.');
+            $this->setFailed();
+            throw new \Exception('Git repository is not clean. See log for details.');
         }
         $this->command->io->progressAdvance();
         if (!$this->isOnAllowedBranch($allowedBranches)) {
             $this->setError('The current working copy of the site is not on an allowed branch: '
                 . implode(', ', $allowedBranches));
             $this->command->io->newLine(2);
-            throw new \Exception('The current working copy of the site is not on an allowed branch.');
+            $this->setFailed();
+            throw new \Exception('Failed to validate current branch. See log for details.');
         }
         $this->command->io->progressAdvance();
         // Now ensure the current branch is up-to-date.
@@ -684,7 +687,8 @@ class Site
             $this->setError('Failed to pull the latest changes from the git repository:');
             $this->setError($process->getErrorOutput());
             $this->command->io->newLine(2);
-            throw new \Exception('Failed to pull the latest changes from the git repository.');
+            $this->setFailed();
+            throw new \Exception('Failed to refresh git repository. See log for details.');
         }
         $this->command->io->progressFinish();
         $this->command->success('Codebase is clean!');
@@ -710,6 +714,7 @@ class Site
                 // The branch is present, so delete it.
                 $process = $this->runGitCommand('branch', ['-D', $update_branch]);
                 if ($this->applyGitChanges && !$process->isSuccessful()) {
+                    $this->setFailed();
                     throw new \Exception('Failed to delete local branch ' . $update_branch . ': '
                         . $process->getErrorOutput());
                 }
@@ -721,6 +726,7 @@ class Site
         if (!empty($output)) {
             $process = $this->runGitCommand('push', [$remote_key, '--delete', $update_branch]);
             if ($this->applyGitChanges && !$process->isSuccessful()) {
+                $this->setFailed();
                 throw new \Exception('Failed to delete local branch ' . $update_branch . ': '
                     . $process->getErrorOutput());
             }
@@ -729,11 +735,13 @@ class Site
         // repository.
         $process = $this->runGitCommand('checkout', ['-b', $update_branch]);
         if ($this->applyGitChanges && !$process->isSuccessful()) {
+            $this->setFailed();
             throw new \Exception('Failed to create local branch ' . $update_branch . ': '
                 . $process->getErrorOutput());
         }
         $process = $this->runGitCommand('push', ['-u', $remote_key, $update_branch]);
         if ($this->applyGitChanges && !$process->isSuccessful()) {
+            $this->setFailed();
             throw new \Exception('Failed to push local branch ' . $update_branch . ' to remote: '
                 . $process->getErrorOutput());
         }
@@ -842,6 +850,7 @@ class Site
             }
         }
         if (!$success) {
+            $this->setFailed();
             throw new \Exception('Database synchronization failed.');
         }
     }
@@ -881,6 +890,7 @@ class Site
             }
         }
         if (!$success) {
+            $this->setFailed();
             throw new \Exception('Database backup failed.');
         }
     }
@@ -1126,9 +1136,7 @@ class Site
             '--quiet',
         ], 300);
         if (!$process->isSuccessful()) {
-            $this->commandResults['core_status'] = 'failed';
-            $this->commandResults['other_status'] = 'failed';
-            $this->commandResults['status'] = 'failed';
+            $this->setFailed();
 
             $this->commandResults['messages'][] = 'Composer update failed. Any error output from composer follows.'
                 . PHP_EOL;
@@ -1160,7 +1168,7 @@ class Site
         $composerFile = file_get_contents($this->path . '/composer.json');
         $composerLock = file_get_contents($this->path . '/composer.lock');
         if (!$composerFile || !$composerLock) {
-            $this->setError('Could not read composer files.');
+            $this->setFailed();
             throw new \Exception('Could not read composer files.');
         }
         $this->composerFileContents = json_decode($composerFile);
@@ -1373,5 +1381,17 @@ class Site
             $this->commandResults['messages'][] = $others_message;
         }
         return $result;
+    }
+
+    /**
+     * Set the command results to failed.
+     *
+     * @return void
+     */
+    protected function setFailed(): void
+    {
+        $this->commandResults['core_status']  = 'failed';
+        $this->commandResults['other_status'] = 'failed';
+        $this->commandResults['status']       = 'failed';
     }
 }
