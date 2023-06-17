@@ -57,24 +57,27 @@ class Rollback extends Command
             throw new \Exception($site->cannotRollbackReason);
         } else {
             $this->warning('The site will be restored to it\'s pre-update state.');
-            if ($site->multisitePartialBackupsOnly) {
-                // Ask the user if they want to continue with a y/n prompt.
-                $question = new ConfirmationQuestion(
-                    $site->cannotRollbackReason
-                        . ' Do you want to continue with the rollback anyway?',
-                    false
-                );
-            } else {
-                $question = new ConfirmationQuestion(
-                    'Are you sure you want to continue?',
-                    false
-                );
-            }
-            if (!$this->io->askQuestion($question)) {
-                $this->io->newLine();
-                $this->info('Rollback cancelled.');
-                $this->io->newLine();
-                return 0;
+            $this->io->newLine();
+            if ($this->input->isInteractive()) {
+                if ($site->multisitePartialBackupsOnly) {
+                    // Ask the user if they want to continue with a y/n prompt.
+                    $question = new ConfirmationQuestion(
+                        $site->cannotRollbackReason
+                            . ' Do you want to continue with the rollback anyway?',
+                        false
+                    );
+                } else {
+                    $question = new ConfirmationQuestion(
+                        'Are you sure you want to continue?',
+                        false
+                    );
+                }
+                if (!$this->io->askQuestion($question)) {
+                    $this->io->newLine();
+                    $this->info('Rollback cancelled.');
+                    $this->io->newLine();
+                    return 0;
+                }
             }
         }
         try {

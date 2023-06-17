@@ -136,7 +136,7 @@ abstract class Command extends BaseCommand implements CommandInterface
                 // command requires it (via requiresUriArgument()), then
                 // the user will be presented with a list to choose from.
                 'uri',
-                InputArgument::OPTIONAL,
+                $this->requiresUriArgument() ? InputArgument::REQUIRED : InputArgument::OPTIONAL,
                 'The URI of a specific site to run the command against.'
                     . ' Must match a URI in the drupalup.sites.yml file.'
             );
@@ -150,24 +150,72 @@ abstract class Command extends BaseCommand implements CommandInterface
     }
 
     /**
-     * Execute the command.
-     *
-     * @param \Symfony\Component\Console\Input\InputInterface $input
-     *   The input object.
-     * @param \Symfony\Component\Console\Output\OutputInterface $output
-     *   The output object.
-     *
-     * @return void
+     * {@inheritdoc}
      */
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    protected function initialize(InputInterface $input, OutputInterface $output)
     {
         $this->input = $input;
         $this->output = $output;
         $this->initIoStyle($input, $output);
+        // Load the configuration.
         $this->loadConfiguration();
+        // Check for required binaries and configuration.
         if (!$this->validateConfiguration() || !$this->locateGit() || !$this->locateComposer()) {
-            return 1;
+            throw new \RuntimeException('Unable to locate required binaries or configuration. See log for details.');
         }
+        $this->io->writeln($this->getApplication()->getLongVersion());
+        $this->io->newLine();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function interact(InputInterface $input, OutputInterface $output)
+    {
+        // If the select option was specified, or the command boths accepts
+        // and requires the uri argument, then list all sites and request
+        // input to choose one.
+        if (($this->input->hasOption('select') && $this->input->getOption('select'))
+            || ($this->acceptsUriArgument() && $this->requiresUriArgument())) {
+            $this->io->section('Select site to ' . $this->getName() . ':');
+            foreach ($this->siteList as $index => $site) {
+                if (is_array($site['uri'])) {
+                    $display_uri = implode(', ', $site['uri']);
+                } else {
+                    $display_uri = $site['uri'];
+                }
+                $this->io->writeln('[<fg=yellow>' . ($index + 1) . '</>]: ' . $display_uri);
+            }
+            $allowed_choices = array_keys($this->siteList);
+            // Increment all the choices by 1:
+            $allowed_choices = array_map(
+                function ($value) {
+                    return $value + 1;
+                },
+                $allowed_choices
+            );
+            $index = $this->io->ask(
+                'Enter the number of the site to ' . $this->getName(),
+                null,
+                function ($answer) use ($allowed_choices) {
+                    if (!is_numeric($answer)) {
+                        throw new \RuntimeException('Please enter a number.');
+                    }
+                    if (!in_array($answer, $allowed_choices)) {
+                        throw new \RuntimeException('Invalid site number.');
+                    }
+                    return $answer;
+                }
+            );
+            $this->input->setArgument('uri', $this->siteList[($index - 1)]['uri']);
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
         // Set the options from input for the specific command.
         $this->setOptions();
         if ($this->input->hasOption('debug')) {
@@ -197,8 +245,6 @@ abstract class Command extends BaseCommand implements CommandInterface
      */
     public function announce(): void
     {
-        $app = $this->getApplication();
-        $this->io->title($app->getName() . ' v' . $app->getVersion());
         $this->io->text([
             '<fg=bright-blue>Config file:</> ' . $this->configFilePath,
             '<fg=bright-blue>Sites list:</>  ' . $this->sitesFilePath,
@@ -594,37 +640,6 @@ abstract class Command extends BaseCommand implements CommandInterface
                     return $site['uri'] === $uri;
                 }
             );
-        } else {
-            // If the list option was specified, or the command boths accepts
-            // and requires the uri argument, then list all sites and request
-            // input to choose one.
-            if (($this->input->hasOption('list') && $this->input->getOption('list'))
-                || ($this->acceptsUriArgument() && $this->requiresUriArgument())) {
-                $this->io->section('Available sites:');
-                foreach ($this->siteList as $index => $site) {
-                    if (is_array($site['uri'])) {
-                        $display_uri = implode(', ', $site['uri']);
-                    } else {
-                        $display_uri = $site['uri'];
-                    }
-                    $this->io->writeln('[<fg=yellow>' . $index . '</>]: ' . $display_uri);
-                }
-                $allowed_choices = array_keys($this->siteList);
-                $index = $this->io->ask(
-                    'Enter the number of the site to ' . $this->getName(),
-                    null,
-                    function ($answer) use ($allowed_choices) {
-                        if (!is_numeric($answer)) {
-                            throw new \RuntimeException('Please enter a number.');
-                        }
-                        if (!in_array($answer, $allowed_choices)) {
-                            throw new \RuntimeException('Invalid site number.');
-                        }
-                        return $answer;
-                    }
-                );
-                $this->siteList = [$this->siteList[$index]];
-            }
         }
         if (!empty($this->siteList)) {
             $this->validateSites();
