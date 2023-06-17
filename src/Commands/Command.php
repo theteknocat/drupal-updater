@@ -467,7 +467,7 @@ abstract class Command extends BaseCommand implements CommandInterface
             $exec_finder = new ExecutableFinder();
             $this->git = $exec_finder->find('git');
             if (empty($this->git)) {
-                $this->io->error('Git not found.');
+                $this->log('Git not found.', LogLevel::ERROR);
                 return false;
             }
         }
@@ -503,7 +503,7 @@ abstract class Command extends BaseCommand implements CommandInterface
             $exec_finder = new ExecutableFinder();
             $this->composer = $exec_finder->find('composer');
             if (empty($this->composer)) {
-                $this->io->error('Composer not found.');
+                $this->log('Composer not found.', LogLevel::ERROR);
                 return false;
             }
         }
