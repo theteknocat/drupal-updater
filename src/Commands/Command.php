@@ -249,7 +249,7 @@ abstract class Command extends BaseCommand implements CommandInterface
             '<fg=bright-blue>Config file:</> ' . $this->configFilePath,
             '<fg=bright-blue>Sites list:</>  ' . $this->sitesFilePath,
             '<fg=bright-blue>Composer:</>    ' . $this->composer . ' (v' . $this->composerVersion . ')',
-            '<fg=bright-blue>Log file:</>    ' . $this->config['log_file_path'],
+            '<fg=bright-blue>Log file:</>    ' . $this->config['log_file_path'] . '/drupalup.log',
         ]);
         $this->io->newLine();
     }
