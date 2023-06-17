@@ -22,7 +22,7 @@ class Log extends Command
     public function configureCommand(): Command
     {
         $this->setName('log')
-            ->setDescription('Displays the log entry for the most recent command.')
+            ->setDescription('Displays the log entries for the most recent command.')
             ->setHelp('Run this command to display all the log entries for the last command that was run.');
         return $this;
     }
