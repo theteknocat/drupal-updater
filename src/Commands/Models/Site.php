@@ -792,7 +792,7 @@ class Site
             $errors = false;
             $this->command->info('Sync'
                 . ($this->command->getConfig('sanitize_databases_on_sync') ? ' and sanitize' : '')
-                . ' production database from ' . $alias . ' for ' . $uri . '...');
+                . ' production database from ' . $alias . ' for ' . $uri . '. This may take a few minutes.');
             $this->command->io->newLine();
             $process = $this->runDrushCommand('sql-sync', [
                 $alias,
