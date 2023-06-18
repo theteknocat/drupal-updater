@@ -491,25 +491,21 @@ class Site
         $this->command->io->newLine();
         // Next import the database backup using drush sql:query.
         $urisWithBackups = $this->urisWithBackups();
-        $steps = count($urisWithBackups);
         $this->command->info('Importing database backup files. This may take a few minutes.');
         $this->command->io->newLine();
-        $this->command->io->progressStart($steps);
-        foreach ($urisWithBackups as $uri => $hasBackup) {
+        foreach ($this->command->io->progressIterate($urisWithBackups) as $uri => $hasBackup) {
             $backup_directory = $this->backupDirectory($uri);
             $db_backup_file = $backup_directory . '/db-backup.sql';
             $process = $this->runDrushCommand('sql:query', [
                 '--file=' . $db_backup_file,
                 '--uri=' . $uri,
             ], 180);
-            $this->command->io->progressAdvance();
             if (!$process->isSuccessful()) {
                 $this->command->io->newLine(2);
                 throw new \Exception('Could not import database backup file for ' . $uri
                     . '. ' . $process->getErrorOutput());
             }
         }
-        $this->command->io->progressFinish();
         // Next we need to run composer install.
         $this->command->info('Running composer install to rollback codebase. This may take a few minutes.');
         $this->command->io->newLine();
