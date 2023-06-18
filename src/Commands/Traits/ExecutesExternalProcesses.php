@@ -197,6 +197,7 @@ trait ExecutesExternalProcesses
             'SHELL_VERBOSITY' => '0',
         ]);
         $process->setTimeout($timeout);
+        $streamOutput = ($streamOutput && $this->getCommandObject()->io->isVerbose());
         try {
             if ($streamOutput || $logOutput) {
                 if ($logOutput) {
@@ -212,7 +213,7 @@ trait ExecutesExternalProcesses
                     $buffer_lines = explode(PHP_EOL, trim($buffer));
                     foreach ($buffer_lines as $line) {
                         $line = rtrim($line);
-                        if ($streamOutput && $this->getCommandObject()->io->isVerbose()) {
+                        if ($streamOutput) {
                             $this->getCommandObject()->io->text(' <fg=green>></> ' . $line);
                         }
                         if ($logOutput) {
