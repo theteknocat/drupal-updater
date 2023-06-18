@@ -531,7 +531,6 @@ class Site
         $this->readComposerFiles();
         $process = $this->runComposerCommand('install', [
             '--no-interaction',
-            '--quiet',
         ], 300);
         if (!$process->isSuccessful()) {
             throw new \Exception('Could not run composer install. ' . $process->getErrorOutput());
@@ -1133,7 +1132,6 @@ class Site
     {
         $process = $this->runComposerCommand('update', [
             '--no-interaction',
-            '--quiet',
         ], 300);
         if (!$process->isSuccessful()) {
             $this->setFailed();
