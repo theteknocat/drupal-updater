@@ -706,4 +706,41 @@ abstract class Command extends BaseCommand implements CommandInterface
             $this->log($message, LogLevel::DEBUG, true);
         }
     }
+
+    /**
+     * Handle process exceptions.
+     *
+     * If the exception has a getProcess method, get the last 5 lines of output
+     * and add them to the errors array.
+     *
+     * @param \Exception $e
+     *   The exception to handle.
+     * @param array $errors
+     *   The errors array to add to.
+     *
+     * @return void
+     */
+    protected function handleProcessException(\Exception $e, array &$errors): void
+    {
+        if (method_exists($e, 'getProcess')) {
+            // Get the process from the exception:
+            $process = call_user_func([$e, 'getProcess']);
+            // Get the last 5 lines of output:
+            $errors[] = 'Last 5 lines of output:';
+            $output_array = explode(PHP_EOL, $process->getOutput());
+            // Take the last 5 trimmed, non-empty lines:
+            $output = array_slice(
+                array_filter(
+                    array_map('trim', $output_array),
+                    fn ($line) => !empty($line)
+                ),
+                -5
+            );
+            // Add code blocks around the output lines.
+            // This is for formatting in an email notification.
+            array_unshift($output, '```');
+            $output[] = '```';
+            $errors = array_merge($errors, $output);
+        }
+    }
 }

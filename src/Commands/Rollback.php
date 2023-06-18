@@ -2,7 +2,7 @@
 
 namespace TheTeknocat\DrupalUp\Commands;
 
-use Symfony\Component\Console\Input\InputOption;
+use Psr\Log\LogLevel;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 
 /**
@@ -86,7 +86,12 @@ class Rollback extends Command
             $this->success('Rollback complete.');
             $this->io->newLine();
         } catch (\Exception $e) {
-            $this->io->error($e->getMessage());
+            $this->io->newLine();
+            $errors[] = 'Rollback failed:';
+            $errors[] = $e->getMessage();
+            $this->handleProcessException($e, $errors);
+            $errors[] = 'The site may now be in an unstable state and require manual intervention.';
+            $this->log($errors, LogLevel::ERROR);
             return 1;
         }
         return 0;

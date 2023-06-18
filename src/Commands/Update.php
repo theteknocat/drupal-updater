@@ -168,8 +168,15 @@ class Update extends Command
             $site->setupCleanUpdateBranch();
             $site->doComposerUpdate();
         } catch (\Exception $e) {
-            $this->warning($e->getMessage());
-            $site->setError($e->getMessage());
+            $this->io->newLine();
+            $errors[] = 'Errors occurred during update:';
+            $errors[] = $e->getMessage();
+            $this->handleProcessException($e, $errors);
+            $errors[] = 'The site may now be in an unstable state and require manual intervention.';
+            $this->io->warning($errors);
+            foreach ($errors as $error) {
+                $site->setError($error);
+            }
             $success = false;
         }
 
@@ -257,15 +264,15 @@ class Update extends Command
         if (!empty($commandResults['messages'])) {
             $message .= PHP_EOL . "**The following messages were generated during the update process:**" . PHP_EOL
                 . PHP_EOL . '---' . PHP_EOL . PHP_EOL;
-            $message .= implode(PHP_EOL, $commandResults['messages']) . PHP_EOL . PHP_EOL;
+            $message .= implode(PHP_EOL, $commandResults['messages']) . PHP_EOL;
         }
 
         if (!empty($errors)) {
             $message .= PHP_EOL . "**The following errors were generated during the update process:**" . PHP_EOL
                 . PHP_EOL . '---' . PHP_EOL . PHP_EOL;
-            $message .= implode(PHP_EOL, $errors) . PHP_EOL . PHP_EOL;
+            $message .= implode(PHP_EOL, $errors) . PHP_EOL;
         }
-        $message .= "---" . PHP_EOL . "--End of Line--";
+        $message .= PHP_EOL . "---" . PHP_EOL . "--End of Line--";
 
         return [
             'subject' => $subject,
@@ -334,7 +341,7 @@ class Update extends Command
      */
     protected function markdownToHtml(string $src_text): string
     {
-        $src_text = htmlspecialchars(trim($src_text), ENT_QUOTES, 'UTF-8');
+        $src_text = trim($src_text);
         // Split the $src_text into an array on PHP_EOL.
         $bits = explode(PHP_EOL, $src_text);
         // Trim all array values (gets rid of any extra breaks).
