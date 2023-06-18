@@ -1095,7 +1095,7 @@ class Site
         $this->command->info('Commit changes to ' . $this->command->getConfig('git.update_branch'). ' and push to '
             . $this->command->getConfig('git.remote_key') . '...');
         $this->command->io->newLine();
-        if ($this->command->isDebug || $this->command->io->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
+        if ($this->command->isDebug || $this->command->io->isVerbose()) {
             $this->command->info('Commit message:');
             $this->command->io->write($commit_message);
             $this->command->io->newLine();
