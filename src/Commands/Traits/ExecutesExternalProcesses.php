@@ -189,8 +189,8 @@ trait ExecutesExternalProcesses
                     $buffer_lines = explode(PHP_EOL, trim($buffer));
                     foreach ($buffer_lines as $line) {
                         $line = rtrim($line);
-                        if ($streamOutput) {
-                            $this->getCommandObject()->io->text('  <fg=blue>|</> ' . $line);
+                        if ($streamOutput && $this->getCommandObject()->io->isVerbose()) {
+                            $this->getCommandObject()->io->text(' <fg=green>></> ' . $line);
                         }
                         if ($logOutput) {
                             $logLines[] = $line;
