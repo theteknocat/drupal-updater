@@ -82,7 +82,6 @@ class Rollback extends Command
         }
         try {
             $site->doRollback();
-            $this->io->newLine();
             $this->success('Rollback complete.');
             $this->io->newLine();
         } catch (\Exception $e) {

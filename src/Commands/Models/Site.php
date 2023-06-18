@@ -1017,10 +1017,8 @@ class Site
         $commit_result = $this->commitChangesAndPush($update_result, $other_updates);
         if ($commit_result) {
             $this->command->success('Changes successfully committed and pushed.');
-            $this->command->io->newLine();
         } else {
             $this->command->warning('Errors occurred committing and pushing the changes. See log for details.');
-            $this->command->io->newLine();
         }
     }
 
