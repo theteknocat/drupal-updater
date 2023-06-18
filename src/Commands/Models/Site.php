@@ -470,24 +470,28 @@ class Site
      */
     public function doRollback(): void
     {
+        $this->command->info('Reset git repository to HEAD and switch to the '
+            . $this->command->getConfig('git.main_branch') . ' branch', false);
         // First thing is to reset the git repository to HEAD.
         $process = $this->runGitCommand('reset', ['--hard', 'HEAD']);
         if (!$process->isSuccessful()) {
+            $this->command->doneError();
             throw new \Exception('Unable to reset git repository to HEAD.');
         }
         // Ensure the repo is clean.
         $process = $this->runGitCommand('clean', ['-f', '-d']);
         if (!$process->isSuccessful()) {
+            $this->command->doneError();
             throw new \Exception('Unable to clean git repository.');
         }
         // Next make sure we are on the main branch.
         $process = $this->runGitCommand('checkout', [$this->command->getConfig('git.main_branch')]);
         if (!$process->isSuccessful()) {
+            $this->command->doneError();
             throw new \Exception('Unable to switch to the ' . $this->command->getConfig('git.main_branch')
                 . ' branch.');
         }
-        $this->command->info('Git repository has been reset to HEAD and switched to the '
-            . $this->command->getConfig('git.main_branch') . ' branch.');
+        $this->command->doneSuccess();
         $this->command->io->newLine();
         // Next import the database backup using drush sql:query.
         $urisWithBackups = $this->urisWithBackups();
@@ -507,8 +511,11 @@ class Site
             }
         }
         // Next we need to run composer install.
-        $this->command->info('Running composer install to rollback codebase. This may take a few minutes.');
-        $this->command->io->newLine();
+        $this->command->info('Run composer install to rollback codebase. This may take a'
+            . ' few minutes', $this->command->io->isVerbose());
+        if ($this->command->io->isVerbose()) {
+            $this->command->io->newLine();
+        }
         // Delete the folders that are created by composer.
         $firstStatus = reset($this->siteStatuses);
         // All URIs will have the same root. We just need the docroot folder name.
@@ -523,6 +530,10 @@ class Site
             $docroot . '/libraries',
         ]);
         if (!$process->isSuccessful()) {
+            if (!$this->command->io->isVerbose()) {
+                $this->command->doneError();
+            }
+            $this->command->io->newLine();
             throw new \Exception('Could not delete vendor, core, modules/contrib, and themes/contrib folders.');
         }
         $this->readComposerFiles();
@@ -530,6 +541,10 @@ class Site
             '--no-interaction',
         ], 300, true);
         if (!$process->isSuccessful()) {
+            if (!$this->command->io->isVerbose()) {
+                $this->command->doneError();
+            }
+            $this->command->io->newLine();
             throw new \Exception('Could not run composer install. ' . $process->getErrorOutput());
         }
         if (!$this->composerRebuildCaches) {
@@ -541,6 +556,10 @@ class Site
         }
         // Reset the git repo again, to revert any scaffold files.
         $this->runGitCommand('reset', ['--hard', 'HEAD']);
+        if (!$this->command->io->isVerbose()) {
+            $this->command->doneSuccess();
+        }
+        $this->command->io->newLine();
     }
 
     /**
