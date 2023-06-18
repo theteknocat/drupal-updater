@@ -2,6 +2,7 @@
 
 namespace TheTeknocat\DrupalUp\Commands\Models;
 
+use Symfony\Component\Console\Output\OutputInterface;
 use TheTeknocat\DrupalUp\Commands\Command;
 use TheTeknocat\DrupalUp\Commands\Traits\ExecutesExternalProcesses;
 
@@ -1095,9 +1096,14 @@ class Site
         if (!empty($this->commandResults['messages'])) {
             $commit_message .= PHP_EOL . PHP_EOL . implode(PHP_EOL, $this->commandResults['messages']);
         }
-        $this->command->info('Committing changes to git. Commit message:');
-        $this->command->io->write($commit_message);
-        $this->command->io->newLine(2);
+        $this->command->info('Commit changes to ' . $this->command->getConfig('git.update_branch'). ' and push to '
+            . $this->command->getConfig('git.remote_key') . '...');
+        $this->command->io->newLine();
+        if ($this->command->isDebug || $this->command->io->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
+            $this->command->info('Commit message:');
+            $this->command->io->write($commit_message);
+            $this->command->io->newLine();
+        }
         $this->runGitCommand('add', ['-A']);
         $process = $this->runGitCommand('commit', [
             '--author=' . escapeshellarg($this->command->getConfig('git.commit_author')),
