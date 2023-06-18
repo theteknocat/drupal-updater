@@ -228,7 +228,10 @@ abstract class Command extends BaseCommand implements CommandInterface
         // Display the command announcement.
         $this->announce();
         // Set which sites to use for the command.
-        $this->setSitesToUse();
+        if (!$this->setSitesToUse()) {
+            // If no sites were set, then there was likely an error.
+            return 1;
+        }
         // Run the command.
         $result = $this->runCommand();
         if ($this->logStarted) {
@@ -621,13 +624,14 @@ abstract class Command extends BaseCommand implements CommandInterface
      * If a URI is provided, remove all other sites from the list.
      * If the list option was specified, list all sites and request input.
      *
-     * @return void
+     * @return bool
+     *   TRUE if sites were found, FALSE otherwise.
      */
-    protected function setSitesToUse(): void
+    protected function setSitesToUse(): bool
     {
         if (!$this->input->hasArgument('uri')) {
             // If the command doesn't have a URI argument then we don't need to do anything.
-            return;
+            return true;
         }
         $uri = $this->input->getArgument('uri');
         if (!empty($uri)) {
@@ -646,10 +650,13 @@ abstract class Command extends BaseCommand implements CommandInterface
             $this->validateSites();
             if (empty($this->sitesToProcess)) {
                 $this->log('Unable to load any sites to process.', LogLevel::ERROR);
+                return false;
             }
         } else {
             $this->log('No sites found to process.', LogLevel::ERROR);
+            return false;
         }
+        return true;
     }
 
     /**
