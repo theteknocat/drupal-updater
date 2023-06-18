@@ -483,7 +483,11 @@ abstract class Command extends BaseCommand implements CommandInterface
             'SHELL_VERBOSITY' => '0',
         ]);
         $process->run();
-        return $process->isSuccessful();
+        if (!$process->isSuccessful()) {
+            $this->log('Unable to call git process: ' . $process->getErrorOutput(), LogLevel::ERROR);
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -538,7 +542,7 @@ abstract class Command extends BaseCommand implements CommandInterface
                 return false;
             }
         } else {
-            $this->log('Unable to determine composer version.', LogLevel::ERROR);
+            $this->log('Unable to determine composer version: ' . $process->getErrorOutput(), LogLevel::ERROR);
             return false;
         }
         return true;
