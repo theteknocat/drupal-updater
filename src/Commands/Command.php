@@ -145,7 +145,8 @@ abstract class Command extends BaseCommand implements CommandInterface
             'debug',
             'D',
             InputOption::VALUE_NONE,
-            'Output additional information for debugging during operation.'
+            'Equivalent to using -vvv or --verbosity=3. Logs additional information for debugging and'
+                . ' outputs some additional details to the console.'
         );
     }
 
@@ -222,12 +223,7 @@ abstract class Command extends BaseCommand implements CommandInterface
     {
         // Set the options from input for the specific command.
         $this->setOptions();
-        if ($this->input->hasOption('debug')) {
-            $is_debug = $this->input->getOption('debug');
-            if (!empty($is_debug)) {
-                $this->isDebug = true;
-            }
-        }
+        $this->setDebug();
         // Display the command announcement.
         $this->announce();
         // Set which sites to use for the command.
@@ -245,6 +241,34 @@ abstract class Command extends BaseCommand implements CommandInterface
             $this->io->newLine();
         }
         return $result;
+    }
+
+    /**
+     * Set debug mode and align with verbosity.
+     *
+     * @return void
+     */
+    protected function setDebug(): void
+    {
+        $is_debug = $this->input->getOption('debug');
+        $verbosity = $this->io->getVerbosity();
+        if (!empty($is_debug)) {
+            $this->isDebug = true;
+            // Force verbosity to debug, unless verbosity is set to quiet.
+            // This allows debug logging without the extra output.
+            if ($verbosity >= OutputInterface::VERBOSITY_NORMAL) {
+                $this->io->setVerbosity(OutputInterface::VERBOSITY_DEBUG);
+                if (\function_exists('putenv')) {
+                    @putenv('SHELL_VERBOSITY=' . 3);
+                }
+                $_ENV['SHELL_VERBOSITY'] = 3;
+                $_SERVER['SHELL_VERBOSITY'] = 3;
+            }
+        }
+        if ($verbosity >= OutputInterface::VERBOSITY_DEBUG && !$this->isDebug) {
+            // Enable debug if verbosity is 3 or higher.
+            $this->isDebug = true;
+        }
     }
 
     /**
