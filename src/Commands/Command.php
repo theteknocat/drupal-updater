@@ -476,7 +476,9 @@ abstract class Command extends BaseCommand implements CommandInterface
             }
         }
         // Call git --version to ensure it is working.
-        $process = new Process([$this->git, '--version']);
+        $process = new Process([$this->git, '--version'], null, [
+            'SHELL_VERBOSITY' => '0',
+        ]);
         $process->run();
         return $process->isSuccessful();
     }
@@ -512,7 +514,9 @@ abstract class Command extends BaseCommand implements CommandInterface
             }
         }
         // Check composer version.
-        $process = new Process([$this->composer, '--version']);
+        $process = new Process([$this->composer, '--version'], null, [
+            'SHELL_VERBOSITY' => '0',
+        ]);
         $process->run();
         if ($process->isSuccessful()) {
             $version = trim($process->getOutput());

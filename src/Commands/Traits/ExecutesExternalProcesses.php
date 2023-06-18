@@ -170,7 +170,9 @@ trait ExecutesExternalProcesses
         bool $logOutput = false
     ): Process {
         chdir($this->path);
-        $process = new Process($options);
+        $process = new Process($options, null, [
+            'SHELL_VERBOSITY' => '0',
+        ]);
         $process->setTimeout($timeout);
         try {
             if ($streamOutput || $logOutput) {
