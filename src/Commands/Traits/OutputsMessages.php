@@ -38,12 +38,23 @@ trait OutputsMessages
      *
      * @param string $message
      *   The message to output.
+     * @param bool $newline
+     *   Whether to add a newline to the end of the message.
      *
      * @return void
      */
-    public function warning(string $message): void
+    public function warning(string $message, bool $newline = true): void
     {
-        $this->io->writeln('<bg=yellow;fg=white>[warning]</> <fg=yellow;bg=default>' . $message . '</>');
+        $prefix = ' <bg=yellow;fg=white>[warning]</>';
+        $suffix = '';
+        if (!empty($message)) {
+            $prefix .= ' <fg=yellow;bg=default>';
+            $suffix = '</>';
+        }
+        if (!$newline) {
+            $suffix .= '...';
+        }
+        $this->io->write($prefix . $message . $suffix, $newline);
     }
 
     /**
@@ -51,12 +62,22 @@ trait OutputsMessages
      *
      * @param string $message
      *   The message to output.
+     * @param bool $newline
+     *   Whether to add a newline to the end of the message.
      *
      * @return void
      */
-    public function info(string $message): void
+    public function info(string $message, bool $newline = true): void
     {
-        $this->io->writeln('<bg=blue;fg=white>[info]</> ' . $message);
+        $prefix = ' <bg=blue;fg=white>[info]</>';
+        $suffix = '';
+        if (!empty($message)) {
+            $prefix .= ' ';
+        }
+        if (!$newline) {
+            $suffix .= '...';
+        }
+        $this->io->write($prefix . $message . $suffix, $newline);
     }
 
     /**
@@ -64,11 +85,42 @@ trait OutputsMessages
      *
      * @param string $message
      *   The message to output.
+     * @param bool $newline
+     *   Whether to add a newline to the end of the message.
      *
      * @return void
      */
-    public function success(string $message): void
+    public function success(string $message, bool $newline = true): void
     {
-        $this->io->writeln('<bg=green;fg=white>[success]</> <fg=green;bg=default>' . $message . '</>');
+        $prefix = ' <bg=green;fg=white>[success]</>';
+        $suffix = '';
+        if (!empty($message)) {
+            $prefix .= ' <fg=green;bg=default>';
+            $suffix = '</>';
+        }
+        if (!$newline) {
+            $suffix .= '...';
+        }
+        $this->io->write($prefix . $message . $suffix, $newline);
+    }
+
+    /**
+     * Successful done indicator.
+     *
+     * @return void
+     */
+    public function doneSuccess(): void
+    {
+        $this->io->write(' <fg=green;bg=default>Done!</>', true);
+    }
+
+    /**
+     * Error indicator.
+     *
+     * @return void
+     */
+    public function doneError(): void
+    {
+        $this->io->write(' <fg=red;bg=default>Error!</>', true);
     }
 }
