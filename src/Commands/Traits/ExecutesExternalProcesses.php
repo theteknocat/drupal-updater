@@ -48,6 +48,9 @@ trait ExecutesExternalProcesses
      *   An array of options to pass to the command.
      * @param int $timeout
      *   The timeout for the command.
+     * @param bool $streamOutput
+     *   Whether to stream the output to the console. If true, the output will
+     *   only be streamed to the console if using the --verbose option.
      *
      * @return \Symfony\Component\Process\Process
      *   An instance of the Symfony Process object.
@@ -79,7 +82,8 @@ trait ExecutesExternalProcesses
      * @param int $timeout
      *   The timeout for the command.
      * @param bool $streamOutput
-     *   Whether to stream the output to the console.
+     *   Whether to stream the output to the console. If true, the output will
+     *   only be streamed to the console if using the --verbose option.
      *
      * @return \Symfony\Component\Process\Process
      *   An instance of the Symfony Process object.
@@ -111,7 +115,8 @@ trait ExecutesExternalProcesses
      * @param int $timeout
      *   The timeout for the command.
      * @param bool $streamOutput
-     *   Whether to stream the output to the console.
+     *   Whether to stream the output to the console. If true, the output will
+     *   only be streamed to the console if using the --verbose option.
      *
      * @return \Symfony\Component\Process\Process
      *   An instance of the Symfony Process object.
@@ -156,7 +161,8 @@ trait ExecutesExternalProcesses
      * @param int $timeout
      *   The timeout for the command.
      * @param bool $streamOutput
-     *   Whether to stream the output to the console.
+     *   Whether to stream the output to the console. If true, the output will
+     *   only be streamed to the console if using the --verbose option.
      * @param bool $logOutput
      *   Whether to log the output.
      *
