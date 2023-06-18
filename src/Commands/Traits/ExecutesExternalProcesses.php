@@ -172,40 +172,46 @@ trait ExecutesExternalProcesses
         chdir($this->path);
         $process = new Process($options);
         $process->setTimeout($timeout);
-        if ($streamOutput || $logOutput) {
-            if ($logOutput) {
-                $this->getCommandObject()->log(
-                    'Command output:',
-                    LogLevel::DEBUG,
-                    true
-                );
-            }
-            $logLines = [];
-            $process->run(function ($type, $buffer) use ($streamOutput, $logOutput, &$logLines) {
-                // Trim the buffer and break on newlines:
-                $buffer_lines = explode(PHP_EOL, trim($buffer));
-                foreach ($buffer_lines as $line) {
-                    $line = rtrim($line);
-                    if ($streamOutput) {
-                        $this->getCommandObject()->io->text('  <fg=blue>|</> ' . $line);
-                    }
-                    if ($logOutput) {
-                        $logLines[] = $line;
-                    }
+        try {
+            if ($streamOutput || $logOutput) {
+                if ($logOutput) {
+                    $this->getCommandObject()->log(
+                        'Command output:',
+                        LogLevel::DEBUG,
+                        true
+                    );
                 }
-            });
-            if ($streamOutput) {
-                $this->getCommandObject()->io->newLine();
+                $logLines = [];
+                $process->run(function ($type, $buffer) use ($streamOutput, $logOutput, &$logLines) {
+                    // Trim the buffer and break on newlines:
+                    $buffer_lines = explode(PHP_EOL, trim($buffer));
+                    foreach ($buffer_lines as $line) {
+                        $line = rtrim($line);
+                        if ($streamOutput) {
+                            $this->getCommandObject()->io->text('  <fg=blue>|</> ' . $line);
+                        }
+                        if ($logOutput) {
+                            $logLines[] = $line;
+                        }
+                    }
+                });
+                if ($streamOutput) {
+                    $this->getCommandObject()->io->newLine();
+                }
+                if ($logOutput) {
+                    $this->getCommandObject()->log(
+                        $logLines,
+                        LogLevel::DEBUG,
+                        true
+                    );
+                }
+            } else {
+                $process->run();
             }
-            if ($logOutput) {
-                $this->getCommandObject()->log(
-                    $logLines,
-                    LogLevel::DEBUG,
-                    true
-                );
-            }
-        } else {
-            $process->run();
+        } catch (\Exception $e) {
+            $this->setFailed();
+            // Re-throw the same exception again.
+            throw $e;
         }
         return $process;
     }
