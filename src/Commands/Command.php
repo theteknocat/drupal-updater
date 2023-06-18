@@ -164,7 +164,10 @@ abstract class Command extends BaseCommand implements CommandInterface
         $this->loadConfiguration();
         // Check for required binaries and configuration.
         if (!$this->validateConfiguration() || !$this->locateGit() || !$this->locateComposer()) {
-            throw new \RuntimeException('Unable to locate required binaries or configuration. See log for details.');
+            // End the log for this command.
+            $this->log(ucwords($this->getName()), 'END', true);
+            throw new \RuntimeException('Unable to validate configuration and/or locate required binaries.'
+                . ' See log for details.');
         }
     }
 
