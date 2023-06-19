@@ -716,14 +716,20 @@ abstract class Command extends BaseCommand implements CommandInterface
                 $this->sitesToProcess[] = $site;
             }
         }
-        $this->info(count($this->sitesToProcess) . ' sites successfully validated.');
+        $this->info(count($this->sitesToProcess) . ' site(s) successfully validated.');
         if (!empty($sites_skipped)) {
             $this->io->newLine();
-            $this->warning(
-                'The following sites will be skipped due to validation errors (see log file for details):',
-            );
-            $this->io->newLine();
-            $this->io->listing(array_map(fn ($site) => implode(', ', $site->getUris()), $sites_skipped));
+            if ($this->io->isVerbose()) {
+                $this->warning(
+                    'The following sites will be skipped due to validation errors (see log file for details):',
+                );
+                $this->io->newLine();
+                $this->io->listing(array_map(fn ($site) => implode(', ', $site->getUris()), $sites_skipped));
+            } else {
+                $this->warning(count($sites_skipped) . ' site(s) will be skipped due to validation errors.'
+                    . ' See log for details.');
+                $this->io->newLine();
+            }
         }
     }
 

@@ -196,16 +196,18 @@ class Update extends Command
     protected function summariseAndNotify(Site $site): void
     {
         if (!$this->notify) {
+            $this->info('Email notifications disabled.');
             return;
         }
         $this->io->newLine();
-        $this->info('Summarise results and send email notification...');
         $summary = $this->buildSummaryMessage($site);
         if (empty($summary)) {
             $this->info('Nothing to report - site was unchanged and no errors occurred.');
             return;
         }
+        $this->info('Summarise results and send email notification', false);
         $this->emailNotification($summary['subject'], $summary['message']);
+        $this->doneSuccess();
     }
 
     /**

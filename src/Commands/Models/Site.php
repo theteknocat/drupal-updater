@@ -495,7 +495,7 @@ class Site
         $this->command->io->newLine();
         // Next import the database backup using drush sql:query.
         $urisWithBackups = $this->urisWithBackups();
-        $this->command->info('Importing database backup files. This may take a few minutes.');
+        $this->command->info('Importing database backup file(s). This may take a few minutes.');
         $this->command->io->newLine();
         foreach ($this->command->io->progressIterate($urisWithBackups) as $uri => $hasBackup) {
             $backup_directory = $this->backupDirectory($uri);
@@ -663,50 +663,48 @@ class Site
         if (is_string($allowedBranches)) {
             $allowedBranches = [$allowedBranches];
         }
-        $this->command->info('Checking for valid git repository and clean codebase...');
-        $this->command->io->newLine();
-        $this->command->io->progressStart(4);
+        $this->command->info('Checking for valid git repository and clean codebase', false);
         // First just make sure we actually have a git repo.
         $process = $this->runGitCommand('status', ['--short']);
-        $this->command->io->progressAdvance();
         if (!$process->isSuccessful()) {
+            $this->command->doneError();
+            $this->command->io->newLine();
             $this->setError('The site does not have a git repository:');
             $this->setError($process->getErrorOutput());
-            $this->command->io->newLine(2);
             $this->setFailed();
             throw new \Exception('Unable to validate git repository. See log for details.');
         }
         $output = $process->getOutput();
         if (!empty($output)) {
+            $this->command->doneError();
+            $this->command->io->newLine();
             $this->setError('The site codebase contains uncommitted changes:');
             $log_output = array_map('trim', explode(PHP_EOL, trim($output)));
             foreach ($log_output as $line) {
                 $this->setError($line);
             }
-            $this->command->io->newLine(2);
             $this->setFailed();
             throw new \Exception('Git repository is not clean. See log for details.');
         }
-        $this->command->io->progressAdvance();
         if (!$this->isOnAllowedBranch($allowedBranches)) {
+            $this->command->doneError();
+            $this->command->io->newLine();
             $this->setError('The current working copy of the site is not on an allowed branch: '
                 . implode(', ', $allowedBranches));
-            $this->command->io->newLine(2);
             $this->setFailed();
             throw new \Exception('Failed to validate current branch. See log for details.');
         }
-        $this->command->io->progressAdvance();
         // Now ensure the current branch is up-to-date.
         $process = $this->runGitCommand('pull');
         if (!$process->isSuccessful()) {
+            $this->command->doneError();
+            $this->command->io->newLine();
             $this->setError('Failed to pull the latest changes from the git repository:');
             $this->setError($process->getErrorOutput());
-            $this->command->io->newLine(2);
             $this->setFailed();
             throw new \Exception('Failed to refresh git repository. See log for details.');
         }
-        $this->command->io->progressFinish();
-        $this->command->success('Codebase is clean!');
+        $this->command->doneSuccess();
         $this->command->io->newLine();
     }
 
@@ -718,8 +716,7 @@ class Site
         $update_branch = $this->command->getConfig('git.update_branch');
         $remote_key = $this->command->getConfig('git.remote_key');
 
-        $this->command->info('Setup clean new branch for updates: ' . $update_branch);
-        $this->command->io->newLine();
+        $this->command->info('Setup clean new branch for updates: ' . $update_branch, false);
         // Delete the local branch, if present.
         $process = $this->runGitCommand('branch', ['--list', $update_branch]);
         if ($process->isSuccessful()) {
@@ -729,6 +726,7 @@ class Site
                 // The branch is present, so delete it.
                 $process = $this->runGitCommand('branch', ['-D', $update_branch]);
                 if ($this->applyGitChanges && !$process->isSuccessful()) {
+                    $this->command->doneError();
                     $this->setFailed();
                     throw new \Exception('Failed to delete local branch ' . $update_branch . ': '
                         . $process->getErrorOutput());
@@ -741,26 +739,32 @@ class Site
         if (!empty($output)) {
             $process = $this->runGitCommand('push', [$remote_key, '--delete', $update_branch]);
             if ($this->applyGitChanges && !$process->isSuccessful()) {
+                $this->command->doneError();
+                $this->command->io->newLine();
                 $this->setFailed();
                 throw new \Exception('Failed to delete local branch ' . $update_branch . ': '
-                    . $process->getErrorOutput());
+                . $process->getErrorOutput());
             }
         }
         // Checkout a fresh new drupal-updates branch and push it to the remote
         // repository.
         $process = $this->runGitCommand('checkout', ['-b', $update_branch]);
         if ($this->applyGitChanges && !$process->isSuccessful()) {
+            $this->command->doneError();
+            $this->command->io->newLine();
             $this->setFailed();
             throw new \Exception('Failed to create local branch ' . $update_branch . ': '
-                . $process->getErrorOutput());
+            . $process->getErrorOutput());
         }
         $process = $this->runGitCommand('push', ['-u', $remote_key, $update_branch]);
         if ($this->applyGitChanges && !$process->isSuccessful()) {
+            $this->command->doneError();
+            $this->command->io->newLine();
             $this->setFailed();
             throw new \Exception('Failed to push local branch ' . $update_branch . ' to remote: '
-                . $process->getErrorOutput());
+            . $process->getErrorOutput());
         }
-        $this->command->success('Branch ' . $update_branch . ' is ready for updates!');
+        $this->command->doneSuccess();
         $this->command->io->newLine();
     }
 
@@ -807,28 +811,34 @@ class Site
             $this->command->io->listing(array_diff($this->uris, array_keys($this->siteAliases)));
             $this->command->io->newLine();
         }
-        foreach ($this->siteAliases as $uri => $alias) {
-            $errors = false;
+        if (!$this->command->io->isVerbose()) {
+            // If not in verbose mode, show a progress bar.
             $this->command->info('Sync'
                 . ($this->command->getConfig('sanitize_databases_on_sync') ? ' and sanitize' : '')
-                . ' production database from ' . $alias . ' for ' . $uri . '. This may take a few minutes.');
+                . ' production database(s). This may take a few minutes.');
             $this->command->io->newLine();
+            $this->command->io->progressStart(count($this->siteAliases));
+        }
+        foreach ($this->siteAliases as $uri => $alias) {
+            $errors = false;
+            if ($this->command->io->isVerbose()) {
+                $this->command->info('Sync'
+                    . ($this->command->getConfig('sanitize_databases_on_sync') ? ' and sanitize' : '')
+                    . ' production database from ' . $alias . ' for ' . $uri
+                    . '. This may take a few minutes', false);
+                $this->command->io->newLine();
+            }
             $process = $this->runDrushCommand('sql-sync', [
                 $alias,
                 '@self',
                 '--uri=' . $uri,
             ], 300, true);
             if ($process->isSuccessful()) {
-                $this->command->success('Sync complete, cleaning up...');
-                $this->command->io->newLine();
-                $steps = $this->command->getConfig('sanitize_databases_on_sync') ? 3 : 2;
-                $this->command->io->progressStart($steps);
                 if ($this->command->getConfig('sanitize_databases_on_sync')) {
                     // Run the drush sql-sanitize command.
                     $process2 = $this->runDrushCommand('sql-sanitize', [
                         '--uri=' . $uri,
                     ]);
-                    $this->command->io->progressAdvance();
                     if (!$process2->isSuccessful()) {
                         $errors = true;
                         // Put the error in the errors array.
@@ -842,20 +852,16 @@ class Site
                     $this->runDrushCommand('cr', [
                         '--uri=' . $uri,
                     ]);
-                    $this->command->io->progressAdvance();
                     $process3 = $this->runDrushCommand('cim', [
                         '--uri=' . $uri,
                     ]);
-                    if ($process3->isSuccessful()) {
-                        $this->command->io->progressAdvance();
-                    } else {
+                    if (!$process3->isSuccessful()) {
                         $errors = true;
                         // Put the error in the errors array.
                         $this->setError('Failed to import configuration for ' . $uri . ': '
                             . $process3->getErrorOutput());
                     }
                 }
-                $this->command->io->progressFinish();
                 $success = (!$errors);
             } else {
                 // Put the error in the errors array.
@@ -863,6 +869,19 @@ class Site
                     . $uri . ': ' . $process->getErrorOutput());
                 $success = false;
             }
+            if ($this->command->io->isVerbose()) {
+                if ($success) {
+                    $this->command->doneSuccess();
+                } else {
+                    $this->command->doneError();
+                }
+                $this->command->io->newLine();
+            } else {
+                $this->command->io->progressAdvance();
+            }
+        }
+        if (!$this->command->io->isVerbose()) {
+            $this->command->io->progressFinish();
         }
         if (!$success) {
             $this->setFailed();
@@ -878,12 +897,21 @@ class Site
     public function backupDatabase(): void
     {
         $success = true;
-        foreach ($this->uris as $uri) {
-            $this->command->info('Backup database for ' . $uri . '...');
+        if (!$this->command->io->isVerbose()) {
+            // If not in verbose mode, show a progress bar.
+            $this->command->info('Backup database(s). This may take a few minutes.');
             $this->command->io->newLine();
+            $this->command->io->progressStart(count($this->uris));
+        }
+        foreach ($this->uris as $uri) {
+            if ($this->command->io->isVerbose()) {
+                $this->command->info('Backup database for ' . $uri, false);
+            }
             // Run the drush sql-dump command.
             $backup_directory = $this->backupDirectory($uri);
             if (!$backup_directory) {
+                $this->command->doneError();
+                $this->command->io->newLine();
                 $this->setError('Failed to establish backup directory for ' . $uri);
                 $success = false;
                 break;
@@ -894,15 +922,26 @@ class Site
             ]);
             if ($process->isSuccessful()) {
                 $this->dbBackupFiles[] = $backup_directory . '/db-backup.sql';
-                $this->command->success('Database backed up to:');
-                $this->command->io->text($backup_directory . '/db-backup.sql');
-                $this->command->io->newLine();
+                if ($this->command->io->isVerbose()) {
+                    $this->command->doneSuccess();
+                    $this->command->success('Database backed up to:');
+                    $this->command->io->text($backup_directory . '/db-backup.sql');
+                    $this->command->io->newLine();
+                }
             } else {
+                $this->command->doneError();
+                $this->command->io->newLine();
                 // Put the error in the errors array.
                 $this->setError('Failed to backup database for ' . $uri . ': '
-                    . $process->getErrorOutput());
+                . $process->getErrorOutput());
                 $success = false;
             }
+            if (!$this->command->io->isVerbose()) {
+                $this->command->io->progressAdvance();
+            }
+        }
+        if (!$this->command->io->isVerbose()) {
+            $this->command->io->progressFinish();
         }
         if (!$success) {
             $this->setFailed();
@@ -943,19 +982,32 @@ class Site
      */
     public function doComposerUpdate(): void
     {
-        $this->command->info('Running composer updates. This will take a few minutes.');
-        $this->command->io->newLine();
+        $this->command->info(
+            'Running composer updates. This will take a few minutes',
+            $this->command->io->isVerbose()
+        );
+        if ($this->command->io->isVerbose()) {
+            $this->command->io->newLine();
+        }
         $this->readComposerFiles();
 
         // We run the composer updates twice as occassionally the first run
         // will not update all packages properly, or changes to packages may
         // result in some being removed inadvertently.
         if (!$this->runComposerUpdates()) {
+            if (!$this->command->io->isVerbose()) {
+                $this->command->doneError();
+                $this->command->io->newLine();
+            }
             return;
         }
         $this->runComposerUpdates();
 
-        $this->command->success('Composer update task completed.');
+        if ($this->command->io->isVerbose()) {
+            $this->command->success('Composer update task completed.');
+        } else {
+            $this->command->doneSuccess();
+        }
         $this->command->io->newLine();
 
         $result = $this->checkComposerChanges();
@@ -982,30 +1034,14 @@ class Site
             return;
         }
 
-        $steps = 1;
-        if (!$this->composerRebuildCaches) {
-            $steps++;
-        }
-        if (!$this->composerUpdateDatabase) {
-            $steps++;
-        }
         $post_update_revert_files = $this->command->getConfig('post_update_revert_files');
-        if (null !== $post_update_revert_files) {
-            $steps += count($post_update_revert_files);
-        }
-        if ($steps > 0) {
-            $this->command->info('Running additional tasks to complete the update. This may take a few minutes.');
-            $this->command->io->newLine();
-            $this->command->io->progressStart($steps);
-        }
+        $this->command->info('Running additional tasks to complete the update. This may take a few minutes...', false);
         if (!$this->composerRebuildCaches) {
             $this->runDrushCommand('cr');
-            $this->command->io->progressAdvance();
         }
         if (!$this->composerUpdateDatabase) {
             $this->runDrushCommand('updb');
             $this->runDrushCommand('cr');
-            $this->command->io->progressAdvance();
         }
 
         $update_result = $this->compilePackageUpdateInfo($result['updated_packages'] ?? [], 'updated');
@@ -1016,17 +1052,13 @@ class Site
             || $update_result['other']);
         $this->compilePackageUpdateInfo($result['new_packages'] ?? [], 'new');
 
-        $this->command->io->progressAdvance();
-
         if (null !== $post_update_revert_files) {
             foreach ($post_update_revert_files as $file) {
                 $this->runDiffAndRevert($post_update_revert_files);
-                $this->command->io->progressAdvance();
             }
         }
-        if ($steps > 0) {
-            $this->command->io->progressFinish();
-        }
+        $this->command->doneSuccess();
+        $this->command->io->newLine();
 
         // Now set status messages.
         $this->commandResults['core_status'] = $update_result['core'] ? 'success' : 'unchanged';
@@ -1034,9 +1066,7 @@ class Site
         $this->commandResults['status'] = ($update_result['core'] == $other_updates) ? 'success' : 'mixed';
 
         $commit_result = $this->commitChangesAndPush($update_result, $other_updates);
-        if ($commit_result) {
-            $this->command->success('Changes successfully committed and pushed.');
-        } else {
+        if (!$commit_result) {
             $this->command->warning('Errors occurred committing and pushing the changes. See log for details.');
         }
     }
@@ -1109,10 +1139,14 @@ class Site
         if (!empty($this->commandResults['messages'])) {
             $commit_message .= PHP_EOL . PHP_EOL . implode(PHP_EOL, $this->commandResults['messages']);
         }
-        $this->command->info('Commit changes to ' . $this->command->getConfig('git.update_branch'). ' and push to '
-            . $this->command->getConfig('git.remote_key') . '...');
-        $this->command->io->newLine();
-        if ($this->command->isDebug || $this->command->io->isVerbose()) {
+        $this->command->info(
+            'Commit changes to ' . $this->command->getConfig('git.update_branch'). ' and push to '
+                . $this->command->getConfig('git.remote_key')
+                . ($this->command->io->isVerbose() ? '...' : ''),
+            $this->command->io->isVerbose()
+        );
+        if ($this->command->io->isVerbose()) {
+            $this->command->io->newLine();
             $this->command->info('Commit message:');
             $this->command->io->write($commit_message);
             $this->command->io->newLine();
@@ -1127,11 +1161,19 @@ class Site
             $this->commandResults['messages'][] = 'Git commit failed. Any error output from git follows.'
                 . PHP_EOL;
             $this->commandResults['messages'][] = $process->getErrorOutput() . PHP_EOL;
+            if (!$this->command->io->isVerbose()) {
+                $this->command->doneError();
+                $this->command->io->newLine();
+            }
             $this->setError('Git commit failed: ' . $process->getErrorOutput());
             return false;
         }
         $process = $this->runGitCommand('push');
         if (!$process->isSuccessful() && $this->applyGitChanges) {
+            if (!$this->command->io->isVerbose()) {
+                $this->command->doneError();
+                $this->command->io->newLine();
+            }
             // Only note errors if we are actually applying the changes.
             $this->commandResults['messages'][] = 'Git push failed. Any error output from git follows.'
                 . PHP_EOL;
@@ -1139,6 +1181,7 @@ class Site
             $this->setError('Git push failed: ' . $process->getErrorOutput());
             return false;
         }
+        $this->command->doneSuccess();
         return true;
     }
 
