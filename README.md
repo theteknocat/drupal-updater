@@ -91,10 +91,10 @@ Command: `drupalup [update]`
 
 Options:
 
-* `<uri>` - Optional. Specify a single site to update. Must match a URI in the drupalup.sites.yml file.
-* `--list` - Optional. Only applies if `<uri>` is not supplied. Lists all available sites allowing the user to select one.
-* `--notify` - Optional. Send an email notification on completion. Only needed if the always_notify config setting is false or omitted.
-* `--dry-run` - perform a dry-run, meaning run all the updates, send a notification (if enabled), but perform any git commits or pushes in dry-run mode and log the results.
+* `<uri>` - Optional. Specify a single site to update. Must match a URI in the drupalup.sites.yml file. If omitted, all sites will be updated.
+* `--select, -s` - Optional. Only applies if `<uri>` is not supplied. Lists all available sites allowing the user to select one to be updated.
+* `--notify, -N` - Optional. Send an email notification on completion. Only needed if the always_notify config setting is false or omitted.
+* `--dry-run, -d` - perform a dry-run, meaning run all the updates, send a notification (if enabled), but perform git commits and pushes in dry-run mode and log the results.
 
 ### Rollback Update
 
