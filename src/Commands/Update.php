@@ -242,9 +242,8 @@ class Update extends Command
         foreach ($site->getUris() as $uri) {
             $full_url = 'http://' . $uri;
             $message .= "* [" . $uri . "](" . $full_url . ")" . PHP_EOL;
-            $message .= "   **File path:** " . $site->getPath() . PHP_EOL;
         }
-        $message .= PHP_EOL;
+        $message .= PHP_EOL . "**File path:** " . $site->getPath() . PHP_EOL;
         if ($this->isDryRun) {
             $message .= PHP_EOL . "**Dry-run only:** No git changes were committed or pushed." . PHP_EOL . PHP_EOL;
         }
