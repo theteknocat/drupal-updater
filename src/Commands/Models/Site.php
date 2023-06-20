@@ -1050,7 +1050,7 @@ class Site
             || $update_result['library']
             || $update_result['profile']
             || $update_result['other']);
-        $this->compilePackageUpdateInfo($result['new_packages'] ?? [], 'new');
+        $this->compilePackageUpdateInfo($result['new_packages'] ?? [], 'added');
 
         if (null !== $post_update_revert_files) {
             foreach ($post_update_revert_files as $file) {
@@ -1317,13 +1317,13 @@ class Site
      *
      * @param array $packages
      *   The packages array.
-     * @param string $install_type
+     * @param string $install_action
      *   The type of install ('new' or 'updated').
      *
      * @return array
      *   The installation success info.
      */
-    protected function compilePackageUpdateInfo(array $packages, string $install_type): array
+    protected function compilePackageUpdateInfo(array $packages, string $install_action): array
     {
         $result = [
             'core'    => false,
@@ -1367,7 +1367,7 @@ class Site
             } elseif (in_array($package['type'], $module_package_types)) {
                 if (empty($modules_message)) {
                     $result['module'] = true;
-                    $modules_message = "**The following " . $install_type . " Drupal modules were installed:**"
+                    $modules_message = "**The following Drupal modules were " . $install_action . ":**"
                         . PHP_EOL . PHP_EOL;
                 }
                 $modules_message .= "* `" . $package['name'] . "` (";
@@ -1378,8 +1378,8 @@ class Site
             } elseif (in_array($package['type'], $theme_package_types)) {
                 if (empty($themes_message)) {
                     $result['theme'] = true;
-                    $themes_message = "**The following " . $install_type
-                        . " Drupal themes were installed:**" . PHP_EOL . PHP_EOL;
+                    $themes_message = "**The following Drupal themes were " . $install_action . ":**"
+                        . PHP_EOL . PHP_EOL;
                 }
                 $themes_message .= "* `" . $package['name'] . "` (";
                 if (isset($package['old_version'])) {
@@ -1389,8 +1389,8 @@ class Site
             } elseif (in_array($package['type'], $library_package_types)) {
                 if (empty($libraries_message)) {
                     $result['library'] = true;
-                    $libraries_message = "**The following " . $install_type
-                        . " Drupal libraries were installed:**" . PHP_EOL;
+                    $libraries_message = "**The following Drupal libraries were " . $install_action . ":**"
+                        . PHP_EOL . PHP_EOL;
                 }
                 $libraries_message .= "* `" . $package['name'] . "` (";
                 if (isset($package['old_version'])) {
@@ -1400,8 +1400,8 @@ class Site
             } elseif (in_array($package['type'], $profile_package_types)) {
                 if (empty($profiles_message)) {
                     $result['profile'] = true;
-                    $profiles_message = "**The following " . $install_type
-                        . " Drupal profiles were installed:**" . PHP_EOL;
+                    $profiles_message = "**The following Drupal profiles were " . $install_action . ":**"
+                        . PHP_EOL . PHP_EOL;
                 }
                 $profiles_message .= "* `" . $package['name'] . "` (";
                 if (isset($package['old_version'])) {
@@ -1411,9 +1411,8 @@ class Site
             } else {
                 if (empty($others_message)) {
                     $result['other'] = true;
-                    $others_message = "**The following additional " . $install_type
-                        . " packages (vendor libraries or "
-                        . "other dependencies) were installed:**" . PHP_EOL . PHP_EOL;
+                    $others_message = "**The following other dependencies were " . $install_action . ":**"
+                        . PHP_EOL . PHP_EOL;
                 }
                 $others_message .= "* `" . $package['name'] . "` (";
                 if (isset($package['old_version'])) {

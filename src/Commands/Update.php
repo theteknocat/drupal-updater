@@ -243,17 +243,17 @@ class Update extends Command
             $full_url = 'http://' . $uri;
             $message .= "* [" . $uri . "](" . $full_url . ")" . PHP_EOL;
         }
-        $message .= PHP_EOL . "**File path:** " . $site->getPath() . PHP_EOL;
-        if ($this->isDryRun) {
-            $message .= PHP_EOL . "**Dry-run only:** No git changes were committed or pushed." . PHP_EOL . PHP_EOL;
-        }
+        $message .= PHP_EOL . "**File path:** " . $site->getPath() . PHP_EOL . PHP_EOL;
         if ($commandResults['status'] == 'mixed') {
             $message .= "**Core update status:** "
-                . $this->friendlyStatuses[$commandResults['core_status']] . PHP_EOL;
+            . $this->friendlyStatuses[$commandResults['core_status']] . PHP_EOL;
             $message .= "**Module update status:** "
-                . $this->friendlyStatuses[$commandResults['module_status']] . PHP_EOL;
+            . $this->friendlyStatuses[$commandResults['module_status']] . PHP_EOL;
         } else {
             $message .= "**Status:** " . $this->friendlyStatuses[$display_status] . PHP_EOL;
+        }
+        if ($this->isDryRun) {
+            $message .= "**Dry-run only:** No git changes were committed or pushed." . PHP_EOL . PHP_EOL;
         }
         if ($display_status == 'success') {
             $message .= PHP_EOL . "The completed updates have been pushed to the remote *"
