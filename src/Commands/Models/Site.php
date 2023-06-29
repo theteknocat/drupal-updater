@@ -163,6 +163,27 @@ class Site
     protected $dbBackupFiles = [];
 
     /**
+     * The directories where DB backups are stored for each URI.
+     *
+     * @var array
+     */
+    protected $dbBackupDirectories = [];
+
+    /**
+     * The full path and filenames of DB backups for each URI.
+     *
+     * @var array
+     */
+    protected $dbBackupFilenames = [];
+
+    /**
+     * An array of the URIs that have backup files.
+     *
+     * @var array|null
+     */
+    protected $urisWithBackups = null;
+
+    /**
      * Construct a site object and initialize its properties.
      *
      * @param array $siteInfo
@@ -448,19 +469,20 @@ class Site
      */
     protected function urisWithBackups(): array
     {
-        $urisWithBackups = [];
-        foreach ($this->uris as $uri) {
-            $urisWithBackups[$uri] = false;
-            $backup_directory = $this->backupDirectory($uri);
-            if (empty($backup_directory)) {
-                continue;
-            }
-            $db_backup_file = $backup_directory . '/db-backup.sql';
-            if (file_exists($db_backup_file)) {
-                $urisWithBackups[$uri] = true;
+        if ($this->urisWithBackups === null) {
+            $this->urisWithBackups = [];
+            foreach ($this->uris as $uri) {
+                $this->urisWithBackups[$uri] = false;
+                if (!$this->backupDirectory($uri)) {
+                    continue;
+                }
+                $db_backup_file = $this->backupFilename($uri);
+                if (file_exists($db_backup_file)) {
+                    $this->urisWithBackups[$uri] = true;
+                }
             }
         }
-        return $urisWithBackups;
+        return $this->urisWithBackups;
     }
 
     /**
@@ -498,8 +520,10 @@ class Site
         $this->command->info('Importing database backup file(s). This may take a few minutes.');
         $this->command->io->newLine();
         foreach ($this->command->io->progressIterate($urisWithBackups) as $uri => $hasBackup) {
-            $backup_directory = $this->backupDirectory($uri);
-            $db_backup_file = $backup_directory . '/db-backup.sql';
+            if (!$hasBackup) {
+                continue;
+            }
+            $db_backup_file = $this->backupFilename($uri);
             $process = $this->runDrushCommand('sql:query', [
                 '--file=' . $db_backup_file,
                 '--uri=' . $uri,
@@ -908,8 +932,7 @@ class Site
                 $this->command->info('Backup database for ' . $uri, false);
             }
             // Run the drush sql-dump command.
-            $backup_directory = $this->backupDirectory($uri);
-            if (!$backup_directory) {
+            if (!$this->backupDirectory($uri)) {
                 $this->command->doneError();
                 $this->command->io->newLine();
                 $this->setError('Failed to establish backup directory for ' . $uri);
@@ -917,15 +940,15 @@ class Site
                 break;
             }
             $process = $this->runDrushCommand('sql-dump', [
-                '--result-file=' . $backup_directory . '/db-backup.sql',
+                '--result-file=' . $this->backupFilename($uri),
                 '--uri=' . $uri,
             ]);
             if ($process->isSuccessful()) {
-                $this->dbBackupFiles[] = $backup_directory . '/db-backup.sql';
+                $this->dbBackupFiles[] = $this->backupFilename($uri);
                 if ($this->command->io->isVerbose()) {
                     $this->command->doneSuccess();
                     $this->command->success('Database backed up to:');
-                    $this->command->io->text($backup_directory . '/db-backup.sql');
+                    $this->command->io->text($this->backupFilename($uri));
                     $this->command->io->newLine();
                 }
             } else {
@@ -960,17 +983,53 @@ class Site
      */
     protected function backupDirectory(string $uri): string|false
     {
-        $full_db_backup_path = $this->siteStatuses[$uri]['root']
-        . '/' . $this->siteStatuses[$uri]['files'] . '/database-backups'
-        . '/' . $uri;
-        if (!is_dir($full_db_backup_path)) {
-            // If the directory does not exist, create it.
-            if (!mkdir($full_db_backup_path, 0755, true)) {
-                $this->setError('Could not create directory for database backup: ' . $full_db_backup_path);
-                return false;
+        if (!isset($this->dbBackupDirectories[$uri])) {
+            $full_db_backup_path = $this->siteStatuses[$uri]['root']
+            . '/' . $this->siteStatuses[$uri]['files'] . '/database-backups';
+            // Assume it's good by default.
+            $this->dbBackupDirectories[$uri] = $full_db_backup_path;
+            if (!is_dir($full_db_backup_path)) {
+                // If the directory does not exist, try to create it.
+                if (!mkdir($full_db_backup_path, 0755, true)) {
+                    $this->setError('Could not create directory for database backup: ' . $full_db_backup_path);
+                    $this->dbBackupDirectories[$uri] = false;
+                }
             }
         }
-        return $full_db_backup_path;
+        return $this->dbBackupDirectories[$uri];
+    }
+
+    /**
+     * Determine and return the backup filename for a given URI.
+     *
+     * This method should not be called without first calling the
+     * backupDirectory() method and checking its return value.
+     * Otherwise it will throw an exception and cause the script to
+     * exit.
+     *
+     * @param string $uri
+     *   The URI of the site.
+     *
+     * @throws \Exception
+     *
+     * @return string
+     *   The backup filename with full path.
+     */
+    protected function backupFilename(string $uri): string
+    {
+        if (empty($this->dbBackupFilenames[$uri])) {
+            $backup_directory = $this->backupDirectory($uri);
+            if (!$backup_directory) {
+                $this->setFailed();
+                throw new \Exception('Backup directory cannot be determined.');
+            } else {
+                // First convert the URI to a clean filename.
+                $uri_for_filename = str_replace(['http://', 'https://', '.'], ['', '', '-'], $uri);
+                $this->dbBackupFilenames[$uri] = $this->backupDirectory($uri)
+                    . '/db-backup-' . $uri_for_filename . '.sql';
+            }
+        }
+        return $this->dbBackupFilenames[$uri];
     }
 
     /**
