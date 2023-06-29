@@ -845,7 +845,7 @@ class Site
     public function syncProdDatabase(): void
     {
         if ($this->skipDbSync) {
-            $this->command->info('Skipping database sync.');
+            $this->command->info('Skip database sync from production.');
             $this->command->io->newLine();
             return;
         }
