@@ -9,28 +9,28 @@ git_path: ''
 # email notification will mention this.
 # NOTE: NO TRAILING SLASH!
 log_file_path: ''
-# OPTIONAL: Script to execute after updates are completed. This would be useful if you
-# wanted to have it correct permissions on the files once the update is complete. This
-# command will always be run from
-# within the site's directory
-post_execution_script: ''
-# OPTIONAL: List of files to revert after updates are completed. If they are reverted, a
-# diff will be generated and included in the email notification and commit message. This
-# is useful if you have made changes to things like the .gitignore, .htaccess or
-# development.services.yml files that you want to retain after updates, but still want to
-# ensure you can apply any important updates to them from drupal core. If your sites do not
-# always have a consistent docroot folder name you can use the [docroot] token and the
-# script will replace that with the actual docroot folder name.
-post_update_revert_files:
-  - .gitignore
+# OPTIONAL: A script to run after updates are completed and committed. This could be useful
+# if, for example, you need automatically correct file permissions once the update is complete.
+# This command will always be run from within the site's directory.
+post_update_script: ''
+# OPTIONAL: List of files to diff after updates are completed, but prior to committing.
+# A diff will be generated for each file and included in the email notification and
+# commit message. This is useful if you want to monitor changes to specific files for
+# manual review.
+post_update_diff_files:
   - '[docroot]/.htaccess'
-  - '[docroot]/sites/development.services.yml'
+# OPTIONAL: Similar to post_update_diff_files, but in addition to generating a diff, the
+# files will be reverted to their original state prior to committing. WARNING: this list
+# will take precedence over post_update_diff_files, so if you include a file in both lists,
+# it will be reverted.
+post_update_revert_files: {  }
 # REQUIRED: Whether or not to sanitize the local database after syncing from production.
 sanitize_databases_on_sync: true
 # OPTIONAL: whether or not to always send an email notification after updates are completed.
 # If false or not specified, an email will only be sent if the --notify flag is used when running
 # the script.
 always_notify: false
+# REQUIRED: Email settings.
 mail:
   # REQUIRED: Notification email address.
   notification_email: 'johnny.appleseed@example.com'
@@ -48,6 +48,7 @@ mail:
   from_email: 'johnny.appleseed@example.com'
   # REQUIRED: From name for sending emails.
   from_email_name: 'Johnny Appleseed'
+# REQUIRED: Git settings.
 git:
   # REQUIRED: The git repository remote key.
   remote_key: 'origin'

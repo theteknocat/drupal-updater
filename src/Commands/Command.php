@@ -372,6 +372,13 @@ abstract class Command extends BaseCommand implements CommandInterface
             $valid_config = false;
         }
 
+        if (!empty($this->config['post_execution_script'])) {
+            // This setting is deprecated and has been changed to post_update_script.
+            // Copy the value to the new key and log a warning.
+            $this->config['post_update_script'] = $this->config['post_execution_script'];
+            $this->warning('The post_execution_script setting has been deprecated. Use post_update_script instead.');
+        }
+
         $validator = Validation::createValidator();
 
         // Validate mail configuration values.
