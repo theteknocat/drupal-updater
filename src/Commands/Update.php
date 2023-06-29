@@ -139,7 +139,6 @@ class Update extends Command
         $notify = $this->config['always_notify'] ?? $this->input->getOption('notify') ?? false;
         $this->notify = !empty($notify);
         $skip_db_sync = $this->input->getOption('skip-db-sync');
-        var_dump($skip_db_sync);
         $this->skipDbSync = !empty($skip_db_sync);
     }
 
