@@ -112,6 +112,11 @@ class Update extends Command
             $this->info('Database sync <options=bold>will be</> skipped.');
         } else {
             $this->info('Database sync <options=bold>will be</> performed.');
+            if ($this->getConfig('sanitize_databases_on_sync') == false) {
+                $this->info('Database sanitization <options=bold>will not be</> performed.');
+            } else {
+                $this->info('Database sanitization <options=bold>will be</> performed.');
+            }
         }
         if ($this->notify) {
             $this->info('Email notification <options=bold>will be</> sent on completion.');
