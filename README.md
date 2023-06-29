@@ -95,6 +95,7 @@ Options:
 * `--select, -s` - Optional. Only applies if `<uri>` is not supplied. Lists all available sites allowing the user to select one to be updated.
 * `--notify, -N` - Optional. Send an email notification on completion. Only needed if the always_notify config setting is false or omitted.
 * `--dry-run, -d` - perform a dry-run, meaning run all the updates, send a notification (if enabled), but perform git commits and pushes in dry-run mode and log the results.
+* `--skip-db-sync` - skip syncing the database(s) from production. This is useful if you need to re-run the update multiple times and the database was already synced the first time.
 
 ### Rollback Update
 
