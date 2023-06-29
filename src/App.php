@@ -10,7 +10,7 @@ use Symfony\Component\Console\Application as BaseApplication;
 class App extends BaseApplication
 {
     const NAME = 'Drupal 8+ Updater';
-    const VERSION = '1.0.4-beta.2';
+    const VERSION = '1.0.4-beta.3';
 
     public function __construct()
     {
