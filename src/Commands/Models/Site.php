@@ -537,7 +537,7 @@ class Site
         $this->command->io->newLine();
         // Next import the database backup using drush sql:query.
         $urisWithBackups = $this->urisWithBackups();
-        $this->command->info('Importing database backup file(s). This may take a few minutes.');
+        $this->command->info('Import database backup file(s). This may take a few minutes.');
         $this->command->io->newLine();
         foreach ($this->command->io->progressIterate($urisWithBackups) as $uri => $hasBackup) {
             if (!$hasBackup) {
@@ -707,7 +707,7 @@ class Site
         if (is_string($allowedBranches)) {
             $allowedBranches = [$allowedBranches];
         }
-        $this->command->info('Checking for valid git repository and clean codebase', false);
+        $this->command->info('Check for valid git repository and clean codebase', false);
         // First just make sure we actually have a git repo.
         $process = $this->runGitCommand('status', ['--short']);
         if (!$process->isSuccessful()) {
@@ -1067,7 +1067,7 @@ class Site
     public function doComposerUpdate(): void
     {
         $this->command->info(
-            'Running composer updates. This will take a few minutes',
+            'Run composer updates. This will take a few minutes',
             $this->command->io->isVerbose()
         );
         if ($this->command->io->isVerbose()) {
