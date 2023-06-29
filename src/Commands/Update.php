@@ -273,7 +273,7 @@ class Update extends Command
                 . PHP_EOL . '---' . PHP_EOL . PHP_EOL;
             $message .= implode(PHP_EOL, $errors) . PHP_EOL;
         }
-        $message .= PHP_EOL . "---" . PHP_EOL . "--End of Line--";
+        $message .= PHP_EOL . "---" . PHP_EOL . "--End of Line--" . PHP_EOL;
 
         return [
             'subject' => $subject,
