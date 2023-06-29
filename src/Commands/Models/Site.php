@@ -184,6 +184,13 @@ class Site
     protected $urisWithBackups = null;
 
     /**
+     * Whether or not to skip syncing the DB.
+     *
+     * @var bool
+     */
+    protected $skipDbSync = false;
+
+    /**
      * Construct a site object and initialize its properties.
      *
      * @param array $siteInfo
@@ -426,6 +433,19 @@ class Site
     public function setApplyGitChanges(bool $value): void
     {
         $this->applyGitChanges = $value;
+    }
+
+    /**
+     * Set whether or not to skip the database sync.
+     *
+     * @param bool $value
+     *   TRUE to skip the database sync, FALSE otherwise.
+     *
+     * @return void
+     */
+    public function setSkipDbSync(bool $value): void
+    {
+        $this->skipDbSync = $value;
     }
 
     /**
@@ -824,6 +844,11 @@ class Site
      */
     public function syncProdDatabase(): void
     {
+        if ($this->skipDbSync) {
+            $this->command->info('Skipping database sync.');
+            $this->command->io->newLine();
+            return;
+        }
         $success = true;
         if (empty($this->siteAliases)) {
             $this->command->warning('Database cannot be synchronized from production.');

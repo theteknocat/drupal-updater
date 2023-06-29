@@ -24,6 +24,13 @@ class Update extends Command
     protected bool $isDryRun = false;
 
     /**
+     * Whether or not to skip the database sync.
+     *
+     * @var bool
+     */
+    protected bool $skipDbSync = false;
+
+    /**
      * Whether or not to send an email notification.
      *
      * @var bool
@@ -68,6 +75,13 @@ class Update extends Command
                 InputOption::VALUE_NONE,
                 'List all sites for the user to select which one to update. Ignored if a uri is provided.'
                     . ' If the  --no-interaction option is provided, it has no effect and all sites will be updated.'
+            )
+            ->addOption(
+                'skip-db-sync',
+                null,
+                InputOption::VALUE_NONE,
+                'Skip the database sync step. This is useful if you have already synced the database'
+                    . ' and just want to run the update.'
             );
         return $this;
     }
@@ -94,6 +108,16 @@ class Update extends Command
     public function announce(): void
     {
         parent::announce();
+        if ($this->skipDbSync) {
+            $this->info('Database sync <options=bold>will be</> skipped.');
+        } else {
+            $this->info('Database sync <options=bold>will be</> performed.');
+        }
+        if ($this->notify) {
+            $this->info('Email notification <options=bold>will be</> sent on completion.');
+        } else {
+            $this->info('Email notification <options=bold>will not be</> sent on completion.');
+        }
         if ($this->isDryRun) {
             $this->info('Local git changes <options=bold>will not be</> committed or pushed.');
             $this->info('Commit and push commands will be run with --dry-run and -v options and the results logged.');
@@ -101,11 +125,6 @@ class Update extends Command
                 . ' branch already exists in the remote repository. These errors can be ignored.');
         } else {
             $this->info('Git changes <options=bold>will be</> committed and pushed.');
-        }
-        if ($this->notify) {
-            $this->info('Email notification <options=bold>will be</> sent on completion.');
-        } else {
-            $this->info('Email notification <options=bold>will not be</> sent on completion.');
         }
         $this->io->newLine();
     }
@@ -119,6 +138,9 @@ class Update extends Command
         $this->isDryRun = !empty($is_dry_run);
         $notify = $this->config['always_notify'] ?? $this->input->getOption('notify') ?? false;
         $this->notify = !empty($notify);
+        $skip_db_sync = $this->input->getOption('skip-db-sync');
+        var_dump($skip_db_sync);
+        $this->skipDbSync = !empty($skip_db_sync);
     }
 
     /**
@@ -156,6 +178,7 @@ class Update extends Command
     {
         // Set whether or not to apply git changes based on dry-run mode.
         $site->setApplyGitChanges(!$this->isDryRun);
+        $site->setSkipDbSync($this->skipDbSync);
 
         // Announce the command.
         $site->announce('Update');
