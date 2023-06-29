@@ -171,6 +171,30 @@ trait ExecutesExternalProcesses
     }
 
     /**
+     * Run a post-update script, if any.
+     *
+     * @return void
+     */
+    public function runPostUpdateScript(): void
+    {
+        $post_update_script = $this->getCommandObject()->getConfig('post_update_script');
+        if (!empty($post_update_script)) {
+            $this->command->io->newLine();
+            $this->getCommandObject()->info('Run post-update script:');
+            $this->getCommandObject()->io->write($post_update_script . '...', false);
+            // Split the command into an array.
+            $script_bits = explode(' ', $post_update_script);
+            $process = $this->runProcess($script_bits, 60, true, true);
+            if (!$process->isSuccessful()) {
+                $this->command->doneError();
+                $this->setError('Post-update script failed: ' . $process->getErrorOutput());
+            } else {
+                $this->command->doneSuccess();
+            }
+        }
+    }
+
+    /**
      * Run a process and return the process object.
      *
      * @param array $options

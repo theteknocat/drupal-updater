@@ -1132,7 +1132,13 @@ class Site
         $this->commandResults['status'] = ($update_result['core'] == $other_updates) ? 'success' : 'mixed';
 
         $commit_result = $this->commitChangesAndPush($update_result, $other_updates);
-        if (!$commit_result) {
+        if ($commit_result) {
+            // If there is a post update script, run it.
+            $post_update_script = $this->command->getConfig('post_update_script');
+            if (!empty($post_update_script)) {
+                $this->runPostUpdateScript($post_update_script);
+            }
+        } else {
             $this->command->warning('Errors occurred committing and pushing the changes. See log for details.');
         }
     }
