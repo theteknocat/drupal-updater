@@ -1093,8 +1093,7 @@ class Site
             return;
         }
 
-        $post_update_revert_files = $this->command->getConfig('post_update_revert_files');
-        $this->command->info('Running additional tasks to complete the update. This may take a few minutes...', false);
+        $this->command->info('Run additional tasks to complete the update. This may take a few minutes', false);
         if (!$this->composerRebuildCaches) {
             $this->runDrushCommand('cr');
         }
@@ -1111,10 +1110,18 @@ class Site
             || $update_result['other']);
         $this->compilePackageUpdateInfo($result['new_packages'] ?? [], 'added');
 
-        if (null !== $post_update_revert_files) {
-            foreach ($post_update_revert_files as $file) {
-                $this->runDiffAndRevert($post_update_revert_files);
-            }
+        // Get any files to diff and/or revert.
+        $post_update_diff_files = $this->command->getConfig('post_update_diff_files');
+        $post_update_revert_files = $this->command->getConfig('post_update_revert_files');
+        // Remove any files from the diff list that are in the revert list.
+        if (is_array($post_update_diff_files) && is_array($post_update_revert_files)) {
+            $post_update_diff_files = array_diff($post_update_diff_files, $post_update_revert_files);
+        }
+        if (is_array($post_update_diff_files) && !empty($post_update_diff_files)) {
+            $this->runDiff($post_update_diff_files);
+        }
+        if (is_array($post_update_revert_files) && !empty($post_update_revert_files)) {
+            $this->runDiffAndRevert($post_update_revert_files);
         }
         $this->command->doneSuccess();
         $this->command->io->newLine();
@@ -1131,7 +1138,31 @@ class Site
     }
 
     /**
-     * Run a diff and revert on a file.
+     * Run a diff on a set of files.
+     *
+     * @param array $files
+     *   The files to diff.
+     *
+     * @return void
+     */
+    protected function runDiff(array $files): void
+    {
+        foreach ($files as $file) {
+            $diff = $this->getFileDiff($file);
+            if (empty($diff)) {
+                // No diff, so nothing to do.
+                continue;
+            }
+            $this->commandResults['messages'][] = "**The file *" . $file . "* "
+                . " was modified by the update process and committed with the changes.** "
+                . "Git diff follows for reference." . PHP_EOL . PHP_EOL;
+            $this->commandResults['messages'][] = "```" . PHP_EOL
+                . $diff . PHP_EOL . "```" . PHP_EOL;
+        }
+    }
+
+    /**
+     * Run a diff and revert on a set of files.
      *
      * @param array $files
      *   The files to revert.
@@ -1141,28 +1172,47 @@ class Site
     protected function runDiffAndRevert(array $files): void
     {
         foreach ($files as $file) {
-            // Replace the [docroot] token (if found) in the filename
-            // with the actual docroot folder name.
-            $file = str_replace('[docroot]', basename($this->siteStatuses[$this->uris[0]]['root']), $file);
-            // Now run a git diff on the file.
-            $process = $this->runGitCommand('diff', [$file]);
-            if (!$process->isSuccessful()) {
-                $this->setError('Git diff failed: ' . $process->getErrorOutput());
-                continue;
-            }
-            $diff = $process->getOutput();
+            $diff = $this->getFileDiff($file);
             if (empty($diff)) {
-                // No diff, so nothing to revert.
+                // No diff, so nothing to do.
                 continue;
             }
-            $this->commandResults['messages'][] = "**The " . $file
-                . " file was modified by the update process but was reverted before committing.** "
+            $this->commandResults['messages'][] = "**The file *" . $file . "* "
+                . " was modified by the update process and reverted before committing.** "
                 . "Git diff follows for reference." . PHP_EOL . PHP_EOL;
             $this->commandResults['messages'][] = "```" . PHP_EOL
                 . $diff . PHP_EOL . "```" . PHP_EOL;
             // Now revert the file.
             $process = $this->runGitCommand('checkout', [$file]);
         }
+    }
+
+    /**
+     * Run and get a diff on a file.
+     *
+     * @param string $file
+     *   The file to diff.
+     *
+     * @return string|bool
+     *   The diff, or false if there was an error.
+     */
+    protected function getFileDiff(string $file): string|bool
+    {
+        // Replace the [docroot] token (if found) in the filename
+        // with the actual docroot folder name.
+        $file = str_replace('[docroot]', basename($this->siteStatuses[$this->uris[0]]['root']), $file);
+        // Now run a git diff on the file.
+        $process = $this->runGitCommand('diff', [$file]);
+        if (!$process->isSuccessful()) {
+            $this->setError('Git diff failed: ' . $process->getErrorOutput());
+            return false;
+        }
+        $diff = $process->getOutput();
+        if (empty($diff)) {
+            // No diff, so nothing to do.
+            return false;
+        }
+        return $diff;
     }
 
     /**
