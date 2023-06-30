@@ -212,7 +212,14 @@ abstract class Command extends BaseCommand implements CommandInterface
                     return $answer;
                 }
             );
-            $this->input->setArgument('uri', $this->siteList[($index - 1)]['uri']);
+            $site_uris = $this->siteList[($index - 1)]['uri'];
+            if (is_array($site_uris)) {
+                // If the site has multiple URIs, then set the argument to the
+                // first one.
+                $this->input->setArgument('uri', $site_uris[0]);
+            } else {
+                $this->input->setArgument('uri', $site_uris);
+            }
         }
     }
 
@@ -677,12 +684,13 @@ abstract class Command extends BaseCommand implements CommandInterface
         }
         $uri = $this->input->getArgument('uri');
         if (!empty($uri)) {
+            $this->info('Process single site: ' . $uri);
             // Find the URI in the siteList array and remove all others.
             $this->siteList = array_filter(
                 $this->siteList,
                 function ($site) use ($uri) {
-                    if (is_array($uri)) {
-                        return in_array($site['uri'], $uri);
+                    if (is_array($site['uri'])) {
+                        return in_array($uri, $site['uri']);
                     }
                     return $site['uri'] === $uri;
                 }
