@@ -120,7 +120,8 @@ class Log extends Command
             $entry = trim($entry);
             // Parse the entry using a regular expression based on the following format:
             // [2020-12-31 23:59:59] INFO: Message
-            $pattern = '/^\[(?P<timestamp>.*)\] (?P<level>[^:]+): (?P<message>.*)$/';
+            $pattern = '/^\[(?P<timestamp>[0-9]{4}-[0-9]{2}-[0-9]{2}\s[0-9]{2}:[0-9]{2}:[0-9]{2})\]'
+                . ' (?P<level>[^:]+): (?P<message>.+)$/';
             preg_match($pattern, $entry, $matches);
             if (!empty($matches)) {
                 // The timestamp is in the format YYYY-MM-DD HH:MM:SS.
