@@ -153,6 +153,14 @@ class Update extends Command
     public function runCommand(): int
     {
         if (!empty($this->sitesToProcess)) {
+            if ($this->input->isInteractive()) {
+                // Prompt the user to continue.
+                $this->io->newLine();
+                $this->warning('Updates may take a while, depending on the number of sites.');
+                if (!$this->io->confirm('Continue?', true)) {
+                    return 0;
+                }
+            }
             foreach ($this->sitesToProcess as $site) {
                 $result = $this->updateSite($site);
                 if ($result) {
