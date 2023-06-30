@@ -308,10 +308,12 @@ class Site
     public function announce(string $actionName): void
     {
         $this->command->io->section($actionName . ' Site: ' . reset($this->uris));
+        // Get the drupal version for the first URI.
+        $drupal_version = $this->siteStatuses[reset($this->uris)]['drupal-version'];
         $messages = [
-            '<fg=bright-blue>Site root:</>    ' . $this->path,
-            '<fg=bright-blue>Multisite:</>    ' . ($this->isMultisite ? 'yes' : 'no'),
-            '<fg=bright-blue>Drush path:</>   ' . $this->drushPath,
+            '<fg=bright-blue>Drupal version:</> ' . $drupal_version,
+            '<fg=bright-blue>Site root:</>      ' . $this->path,
+            '<fg=bright-blue>Multisite:</>      ' . ($this->isMultisite ? 'Yes' : 'No'),
         ];
         if (empty($this->siteAliases)) {
             $aliases = ['None found'];
@@ -319,11 +321,10 @@ class Site
             $aliases = array_values($this->siteAliases);
         }
         if ($this->isMultisite) {
-            $messages[] = '<fg=bright-blue>URIs:</>         ' . implode(', ', $this->uris);
-            $messages[] = '<fg=bright-blue>Prod aliases:</> ' . implode(', ', $aliases);
+            $messages[] = '<fg=bright-blue>All URIs:</>       ' . implode(', ', $this->uris);
+            $messages[] = '<fg=bright-blue>Prod aliases:</>   ' . implode(', ', $aliases);
         } else {
-            $messages[] = '<fg=bright-blue>URI:</>          ' . reset($this->uris);
-            $messages[] = '<fg=bright-blue>Prod alias:</>   ' . reset($aliases);
+            $messages[] = '<fg=bright-blue>Prod alias:</>     ' . reset($aliases);
         }
         $this->command->io->text($messages);
         $this->command->io->newLine();
