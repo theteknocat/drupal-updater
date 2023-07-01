@@ -637,6 +637,13 @@ class Site
             ]);
             if ($process->isSuccessful()) {
                 $this->siteStatuses[$uri] = json_decode($process->getOutput(), true);
+                // Make sure we have some of the keys we need.
+                if (empty($this->siteStatuses[$uri]['root']) || empty($this->siteStatuses[$uri]['files'])) {
+                    $this->setError('Site status for ' . $uri . ' is missing "root" and/or "files" keys.'
+                        . ' The site may be in an unstable state, possibly with corrupt or missing database'
+                        . ' content, and cannot be processed.');
+                    unset($this->siteStatuses[$uri]);
+                }
             } else {
                 // Put the error in the errors array.
                 $this->setError('Failed to obtain status for ' . $uri . ': ' . $process->getErrorOutput());
