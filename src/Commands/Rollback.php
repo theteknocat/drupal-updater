@@ -69,7 +69,7 @@ class Rollback extends Command
                 } else {
                     $question = new ConfirmationQuestion(
                         'Are you sure you want to continue?',
-                        false
+                        true
                     );
                 }
                 if (!$this->io->askQuestion($question)) {
