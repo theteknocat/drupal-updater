@@ -313,7 +313,8 @@ class Site
         $messages = [
             '<fg=bright-blue>Drupal version:</> ' . $drupal_version,
             '<fg=bright-blue>Site root:</>      ' . $this->path,
-            '<fg=bright-blue>Multisite:</>      ' . ($this->isMultisite ? 'Yes' : 'No'),
+            '<fg=bright-blue>Multisite:</>      ' . ($this->isMultisite ?
+                'Yes (' . (count($this->uris)) . ' sites)' : 'No'),
         ];
         if (empty($this->siteAliases)) {
             $aliases = ['None found'];
