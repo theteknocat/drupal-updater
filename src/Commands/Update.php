@@ -265,7 +265,7 @@ class Update extends Command
 
         $display_status = $commandResults['status'];
         if ($display_status == 'mixed' && $commandResults['core_status'] != 'failed'
-            && $commandResults['module_status'] != 'failed') {
+            && $commandResults['other_status'] != 'failed') {
             $display_status = 'success';
         }
 
@@ -282,8 +282,8 @@ class Update extends Command
         if ($commandResults['status'] == 'mixed') {
             $message .= "**Core update status:** "
             . $this->friendlyStatuses[$commandResults['core_status']] . PHP_EOL;
-            $message .= "**Module update status:** "
-            . $this->friendlyStatuses[$commandResults['module_status']] . PHP_EOL;
+            $message .= "**Module/theme/profile/library update status:** "
+            . $this->friendlyStatuses[$commandResults['other_status']] . PHP_EOL;
         } else {
             $message .= "**Status:** " . $this->friendlyStatuses[$display_status] . PHP_EOL;
         }
