@@ -73,9 +73,7 @@ This requirement also automatically prevents it from working on typical Drupal 7
 
 ## Commands
 
-This is still a work in progress, but this is what the expected commands will be:
-
-**NOTE:** All commands have a common `--debug` option that writes additional data to the log file for troubleshooting purposes.
+**NOTE:** All commands have a common `--debug` option that writes additional data to the log file for troubleshooting purposes. You can also use the stock verbosity options to display more detailed output for certain things or `--quiet` for no output. If using the latter, you should use it in conjunction with `--no-interaction`.
 
 This project uses the Symfony console component, which provides the following default commands and options:
 
@@ -85,25 +83,25 @@ This project uses the Symfony console component, which provides the following de
 
 ### Update Sites
 
-Runs the drupal updates on all the sites in the drupalup.sites.yml file. This is the default command and does not have to be supplied as an argument when calling the script. This is the default command.
+Command: `drupalup` or `drupalup update`
 
-Command: `drupalup [update]`
+Runs the drupal updates on all the sites in the drupalup.sites.yml file. This is the default command and does not have to be supplied as an argument when calling the script. This is the default command.
 
 Options:
 
 * `<uri>` - Optional. Specify a single site to update. Must match a URI in the drupalup.sites.yml file. If omitted, all sites will be updated.
-* `--select, -s` - Optional. Only applies if `<uri>` is not supplied. Lists all available sites allowing the user to select one to be updated.
+* `--select, -s` - Optional. Lists all available sites allowing the user to select one to be updated. Only works if `<uri>` is not supplied, otherwise ignored.
 * `--notify, -N` - Optional. Send an email notification on completion. Only needed if the always_notify config setting is false or omitted.
 * `--dry-run, -d` - perform a dry-run, meaning run all the updates, send a notification (if enabled), but perform git commits and pushes in dry-run mode and log the results.
 * `--skip-db-sync` - skip syncing the database(s) from production. This is useful if you need to re-run the update multiple times and the database was already synced the first time.
 
 ### Rollback Update
 
-Rolls back an update. This will reset the site back to the main branch, restore the database from the backup made and then run composer install to restore the composer libraries to their previous state.
+Command: `drupalup rollback`
+
+Rolls back updates for a single site. This will reset the site back to the main branch, restore the database from the backup and then run composer install to restore the composer libraries to their previous state.
 
 The purpose of this command is so you can test deployment of the updates prior to production deployment. It does not perform any git operations or send any email notifications. It only works if the site was updated already by the update command.
-
-Command: `drupalup rollback`
 
 Options:
 
@@ -111,8 +109,8 @@ Options:
 
 The rollback process will fail if the source is not currently on either the updates or master branch or there is no database backup file found.
 
-### Display Log
-
-Displays log entries (if any) for the last run command in a table format. If anything is logged while a command is running, it will notify you of that upon completion.
+### Display Log Entries
 
 Command: `drupalup log`
+
+Displays log entries (if any) for the last run command in a table format. If anything is logged while a command is running, it will notify you of that upon completion.
