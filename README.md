@@ -24,7 +24,7 @@ You then just need to setup the configuration files, as per the instructions bel
 
 You can also get a copy of the full source, including the compiled binary, by running:
 
-`composer require theteknocat/drupal/updater`
+`composer require theteknocat/drupal-updater`
 
 From there you can copy, or symlink, the binary to a desired folder on your machine to run it.
 
